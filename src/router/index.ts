@@ -1,0 +1,60 @@
+import { createRouter, createWebHistory } from 'vue-router'
+import HomeView from '@/views/HomeView.vue'
+import AddOrgView from '@/views/AddOrgView.vue'
+import AppDetailView from '@/views/AppDetailView.vue'
+import AddAppView from '@/views/AddAppView.vue'
+import AddDeeplinkView from '@/views/AddDeeplinkView.vue'
+import LaunchHistoryView from '@/views/LaunchHistoryView.vue'
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    {
+      path: '/',
+      name: 'home',
+      component: HomeView,
+    },
+    {
+      path: '/org/:orgId',
+      name: 'org',
+      component: HomeView,
+    },
+    {
+      path: '/org/:orgId/app/:appId',
+      name: 'app-detail',
+      component: AppDetailView,
+    },
+    {
+      path: '/org/:orgId/app/:appId/add-deeplink',
+      name: 'add-deeplink',
+      component: AddDeeplinkView,
+    },
+    {
+      path: '/org/:orgId/app/:appId/deeplink/:deeplinkId/edit',
+      name: 'edit-deeplink',
+      component: AddDeeplinkView,
+    },
+    {
+      path: '/org/:orgId/add-app',
+      name: 'add-app',
+      component: AddAppView,
+    },
+    {
+      path: '/org/:orgId/app/:appId/edit-app',
+      name: 'edit-app',
+      component: AddAppView,
+    },
+    {
+      path: '/add-org',
+      name: 'add-org',
+      component: AddOrgView,
+    },
+    {
+      path: '/launch-history',
+      name: 'launch-history',
+      component: LaunchHistoryView,
+    },
+  ],
+})
+
+export default router
