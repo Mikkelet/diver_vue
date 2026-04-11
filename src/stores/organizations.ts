@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { Organization, App } from '@/types'
+import { getOrganizations } from '@/api/client'
 
 const STORAGE_KEY = 'diver_organizations'
 
@@ -60,6 +61,16 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     apps.value = apps.value.filter(a => a.id !== appId)
   }
 
+  async function fetchAllOrganizations() {
+    const all = await getOrganizations()
+    for (const org of all) {
+      if (!organizations.value.find(o => o.id === org.id)) {
+        organizations.value.push(org)
+      }
+    }
+    saveToStorage(organizations.value)
+  }
+
   function addApp(app: App) {
     const idx = apps.value.findIndex(a => a.id === app.id)
     if (idx >= 0) {
@@ -83,5 +94,6 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     setAppsError,
     removeApp,
     addApp,
+    fetchAllOrganizations,
   }
 })

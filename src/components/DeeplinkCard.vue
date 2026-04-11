@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { DeeplinkTemplate } from '@/types'
+import type {DeeplinkTemplate} from '@/types'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 
@@ -30,6 +30,12 @@ function removeOrg(e: Event, orgId: string) {
     }
   }
 }
+
+onMounted(() => {
+  if (!import.meta.env.PROD) {
+    orgStore.fetchAllOrganizations()
+  }
+})
 
 async function copyOrgId(e: Event, orgId: string) {
   e.stopPropagation()

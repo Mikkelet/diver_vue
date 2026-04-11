@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
 import OrgSidebar from './OrgSidebar.vue'
@@ -7,6 +7,13 @@ import OrgSidebar from './OrgSidebar.vue'
 const themeStore = useThemeStore()
 const router = useRouter()
 const sidebarOpen = ref(false)
+
+const mode = import.meta.env.MODE
+const envBadge = computed(() => {
+  if (mode === 'production') return null
+  if (mode === 'staging') return { label: 'staging', class: 'env-badge--staging' }
+  return { label: 'dev', class: 'env-badge--dev' }
+})
 
 function toggleSidebar() {
   sidebarOpen.value = !sidebarOpen.value
@@ -33,6 +40,7 @@ function goHome() {
           <span class="logo-icon">🤿</span>
           <span class="logo-text">Diver</span>
         </button>
+        <span v-if="envBadge" :class="['env-badge', envBadge.class]">{{ envBadge.label }}</span>
       </div>
       <div class="header-right">
         <RouterLink to="/launch-history" class="btn btn-ghost btn-sm history-link">
@@ -122,6 +130,28 @@ function goHome() {
 
 .logo-icon {
   font-size: 22px;
+}
+
+.env-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 10px;
+  line-height: 1.4;
+}
+
+.env-badge--dev {
+  background: #2563eb22;
+  color: #3b82f6;
+  border: 1px solid #3b82f640;
+}
+
+.env-badge--staging {
+  background: #d9770622;
+  color: #f59e0b;
+  border: 1px solid #f59e0b40;
 }
 
 .history-link {
