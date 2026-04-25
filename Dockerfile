@@ -16,7 +16,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Handle SPA routing
 RUN printf 'server {\n\
-    listen 80;\n\
+    listen 3291;\n\
     root /usr/share/nginx/html;\n\
     index index.html;\n\
     location /api/ {\n\
@@ -29,6 +29,6 @@ RUN printf 'server {\n\
     }\n\
 }\n' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 3291
 
 CMD ["nginx", "-g", "daemon off;"]
