@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import {computed, onMounted, ref} from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 
@@ -8,6 +8,8 @@ const emit = defineEmits<{ navigate: [] }>()
 const router = useRouter()
 const route = useRoute()
 const orgStore = useOrganizationsStore()
+const orgsError = ref<string | null>(null)
+
 
 const currentOrgId = computed(() => route.params.orgId as string | undefined)
 
@@ -21,6 +23,16 @@ function addOrg() {
   emit('navigate')
 }
 
+async function fetchOrgs() {
+  if (import.meta.env.MODE === 'staging') {
+    try {
+      await orgStore.fetchAllOrganizations()
+    } catch (e: any) {
+      orgsError.value = e.toString()
+    }
+  }
+}
+
 function removeOrg(e: Event, orgId: string) {
   e.stopPropagation()
   if (confirm('Remove this organization from your list?')) {
@@ -31,10 +43,8 @@ function removeOrg(e: Event, orgId: string) {
   }
 }
 
-onMounted(() => {
-  if (!import.meta.env.PROD) {
-    orgStore.fetchAllOrganizations()
-  }
+onMounted(async () => {
+  fetchOrgs()
 })
 
 async function copyOrgId(e: Event, orgId: string) {
@@ -84,7 +94,12 @@ async function copyOrgId(e: Event, orgId: string) {
         </div>
       </div>
 
-      <div v-if="orgStore.organizations.length === 0" class="no-orgs">
+      <div v-if="orgsError" class="fetch-error">
+        <p>{{ orgsError }}</p>
+        <button class="btn btn-sm btn-secondary" @click="fetchOrgs()">Retry</button>
+      </div>
+
+      <div v-else-if="orgStore.organizations.length === 0" class="no-orgs">
         <p>No organizations yet</p>
       </div>
     </div>
@@ -218,6 +233,21 @@ async function copyOrgId(e: Event, orgId: string) {
 .action-btn-danger:hover {
   background: rgba(239, 68, 68, 0.1);
   color: var(--color-error);
+}
+
+.fetch-error {
+  padding: 12px;
+  margin: 8px;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  text-align: center;
+  font-size: 12px;
+  color: var(--color-error);
+}
+
+.fetch-error p {
+  margin: 0 0 8px;
 }
 
 .no-orgs {

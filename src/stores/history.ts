@@ -22,7 +22,7 @@ export const useHistoryStore = defineStore('history', () => {
 
   function addEntry(entry: Omit<LaunchHistoryEntry, 'id' | 'timestamp'>) {
     const newEntry: LaunchHistoryEntry = {
-      id: crypto.randomUUID(),
+      id: self.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36),
       timestamp: new Date().toISOString(),
       ...entry,
     }

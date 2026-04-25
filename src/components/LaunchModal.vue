@@ -6,21 +6,22 @@ import { useHistoryStore } from '@/stores/history'
 const props = defineProps<{
   deeplink: DeeplinkTemplate
   app: App
+  environment: Environment
 }>()
 
-const emit = defineEmits<{ close: [] }>()
+const emit = defineEmits<{
+  close: []
+  edit: [deeplink: DeeplinkTemplate]
+  delete: [deeplinkId: string]
+}>()
 
 const historyStore = useHistoryStore()
 
-// Selected environment
-const selectedEnvIndex = ref(0)
-const selectedEnv = computed<Environment | null>(
-  () => props.app.environments[selectedEnvIndex.value] ?? null
-)
+const selectedEnv = computed(() => props.environment)
 
 // Extract path params from `:paramName` tokens
 const pathParams = computed<string[]>(() => {
-  const matches = props.deeplink.path.match(/:[a-zA-Z]+/g) ?? []
+  const matches = (props.deeplink.path ?? '').match(/:[a-zA-Z]+/g) ?? []
   return matches.map(m => m.slice(1))
 })
 
@@ -68,16 +69,25 @@ function updateListItem(key: string, index: number, val: string) {
   queryValues.value[key] = arr
 }
 
+const unfilledParams = computed(() =>
+  pathParams.value.filter(p => !pathValues.value[p]?.trim())
+)
+
 // Build URI
 const builtUri = computed<string>(() => {
   const env = selectedEnv.value
   if (!env) return ''
 
+  // Normalize scheme: strip trailing :// or : if the user included it
+  const scheme = env.scheme.replace(/:\/?\/?$/, '')
+
   // Fill path params
-  let filledPath = props.deeplink.path
+  let filledPath = props.deeplink.path ?? ''
   for (const [key, val] of Object.entries(pathValues.value)) {
-    filledPath = filledPath.replace(`:${key}`, encodeURIComponent(val || `:${key}`))
+    filledPath = filledPath.replace(`:${key}`, val.trim() || `:${key}`)
   }
+  // Ensure path starts with / when non-empty
+  if (filledPath && !filledPath.startsWith('/')) filledPath = `/${filledPath}`
 
   // Build query string
   const queryParts: string[] = []
@@ -99,9 +109,9 @@ const builtUri = computed<string>(() => {
   }
 
   const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
-  const fragment = props.deeplink.fragment ? `#${props.deeplink.fragment}` : ''
+  const fragment = props.deeplink.fragment ? `#${encodeURIComponent(props.deeplink.fragment)}` : ''
 
-  return `${env.scheme}://${props.deeplink.host}${filledPath}${queryString}${fragment}`
+  return `${scheme}://${props.deeplink.host}${filledPath}${queryString}${fragment}`
 })
 
 function launch() {
@@ -134,29 +144,26 @@ function onOverlayClick(e: MouseEvent) {
           <div class="modal-title">{{ deeplink.name }}</div>
           <div class="modal-subtitle" v-if="deeplink.description">{{ deeplink.description }}</div>
         </div>
-        <button class="modal-close" @click="emit('close')">✕</button>
+        <div class="modal-header-actions">
+          <button class="action-btn" title="Edit deeplink" @click="emit('edit', deeplink)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+          <button class="action-btn action-btn-danger" title="Delete deeplink" @click="emit('delete', deeplink.id)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
+          </button>
+          <button class="modal-close" @click="emit('close')">✕</button>
+        </div>
       </div>
 
       <div class="modal-body">
-        <!-- Environment selector -->
-        <div v-if="app.environments.length > 0" class="section">
-          <div class="section-label">Environment</div>
-          <div class="env-tabs">
-            <button
-              v-for="(env, idx) in app.environments"
-              :key="idx"
-              :class="['env-tab', { active: selectedEnvIndex === idx }]"
-              @click="selectedEnvIndex = idx"
-            >
-              {{ env.name }}
-            </button>
-          </div>
-        </div>
-
-        <div v-else class="error-message">
-          This app has no environments configured.
-        </div>
-
         <!-- Path params -->
         <div v-if="pathParams.length > 0" class="section">
           <div class="section-label">Path Parameters</div>
@@ -272,11 +279,14 @@ function onOverlayClick(e: MouseEvent) {
         </div>
 
         <!-- Actions -->
+        <div v-if="unfilledParams.length > 0" class="error-message" style="margin-bottom: 12px">
+          Fill required path params: {{ unfilledParams.join(', ') }}
+        </div>
         <div class="launch-actions">
           <button class="btn btn-secondary" @click="emit('close')">Cancel</button>
           <button
             class="btn btn-primary launch-btn"
-            :disabled="!selectedEnv"
+            :disabled="unfilledParams.length > 0"
             @click="launch"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -299,6 +309,36 @@ function onOverlayClick(e: MouseEvent) {
   font-size: 13px;
   color: var(--color-text-muted);
   margin-top: 2px;
+}
+
+.modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.action-btn:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+.action-btn-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--color-error);
 }
 
 .section {

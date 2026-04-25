@@ -40,11 +40,11 @@ onMounted(async () => {
 
     if (isEdit.value && deeplinkId) {
       const dl = await getDeeplink(orgId, appId, deeplinkId)
-      name.value = dl.name
-      description.value = dl.description
-      host.value = dl.host
-      path.value = dl.path
-      fragment.value = dl.fragment
+      name.value = dl.name ?? ''
+      description.value = dl.description ?? ''
+      host.value = dl.host ?? ''
+      path.value = dl.path ?? ''
+      fragment.value = dl.fragment ?? ''
       queryParams.value = { ...dl.queryParams }
     }
   } catch {
@@ -100,7 +100,8 @@ const previewUri = computed(() => {
     .join('&')
   const qStr = q ? `?${q}` : ''
   const frag = fragment.value ? `#${fragment.value}` : ''
-  return `[scheme]://${host.value}${path.value || '/'}${qStr}${frag}`
+  const p = path.value ? (path.value.startsWith('/') ? path.value : `/${path.value}`) : '/'
+  return `[scheme]://${host.value}${p}${qStr}${frag}`
 })
 </script>
 

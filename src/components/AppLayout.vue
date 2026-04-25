@@ -43,6 +43,12 @@ function goHome() {
         <span v-if="envBadge" :class="['env-badge', envBadge.class]">{{ envBadge.label }}</span>
       </div>
       <div class="header-right">
+        <RouterLink v-if="envBadge" to="/debug" class="btn btn-ghost btn-sm history-link">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Debug
+        </RouterLink>
         <RouterLink to="/launch-history" class="btn btn-ghost btn-sm history-link">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>

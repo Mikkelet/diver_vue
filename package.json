@@ -22,5 +22,8 @@
     "typescript": "^5.9.3",
     "vite": "^5.0.12",
     "vue-tsc": "^2.2.0"
+  },
+  "rules": {
+    "no-console": false
   }
 }

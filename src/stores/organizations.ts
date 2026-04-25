@@ -61,7 +61,12 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     apps.value = apps.value.filter(a => a.id !== appId)
   }
 
+  const fetchOrgsLoading = ref(false)
+  const fetchOrgsError = ref<string | null>(null)
+
   async function fetchAllOrganizations() {
+    fetchOrgsLoading.value = true
+    fetchOrgsError.value = null
     const all = await getOrganizations()
     for (const org of all) {
       if (!organizations.value.find(o => o.id === org.id)) {
@@ -69,6 +74,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
       }
     }
     saveToStorage(organizations.value)
+    fetchOrgsLoading.value = false
   }
 
   function addApp(app: App) {
@@ -95,5 +101,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     removeApp,
     addApp,
     fetchAllOrganizations,
+    fetchOrgsLoading,
+    fetchOrgsError,
   }
 })

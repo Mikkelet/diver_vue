@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { getApp, getDeeplinks, deleteDeeplink } from '@/api/client'
-import type { DeeplinkTemplate, App } from '@/types'
+import type { DeeplinkTemplate, App, Environment } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import DeeplinkCard from '@/components/DeeplinkCard.vue'
 import LaunchModal from '@/components/LaunchModal.vue'
@@ -21,6 +21,10 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const launchDeeplink = ref<DeeplinkTemplate | null>(null)
+const selectedEnvIndex = ref(0)
+const selectedEnv = computed<Environment | null>(
+  () => app.value?.environments[selectedEnvIndex.value] ?? null
+)
 
 const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
 
@@ -101,13 +105,14 @@ function closeLaunchModal() {
           <div>
             <h1 class="page-title">{{ app.name }}</h1>
             <div class="app-envs">
-              <span
-                v-for="env in app.environments"
+              <button
+                v-for="(env, idx) in app.environments"
                 :key="env.name"
-                class="env-chip"
+                :class="['env-chip', { 'env-chip--active': selectedEnvIndex === idx }]"
+                @click="selectedEnvIndex = idx"
               >
                 {{ env.name }}
-              </span>
+              </button>
             </div>
           </div>
           <RouterLink
@@ -143,9 +148,8 @@ function closeLaunchModal() {
             :deeplink="deeplink"
             :orgId="orgId"
             :appId="appId"
+            :environment="selectedEnv"
             @launch="handleLaunchDeeplink"
-            @edit="handleEditDeeplink"
-            @delete="handleDeleteDeeplink"
           />
         </div>
       </template>
@@ -154,10 +158,13 @@ function closeLaunchModal() {
     <!-- Launch modal -->
     <Teleport to="body">
       <LaunchModal
-        v-if="launchDeeplink && app"
+        v-if="launchDeeplink && app && selectedEnv"
         :deeplink="launchDeeplink"
         :app="app"
+        :environment="selectedEnv"
         @close="closeLaunchModal"
+        @edit="dl => { closeLaunchModal(); handleEditDeeplink(dl) }"
+        @delete="id => { closeLaunchModal(); handleDeleteDeeplink(id) }"
       />
     </Teleport>
   </AppLayout>
@@ -218,11 +225,25 @@ function closeLaunchModal() {
 .env-chip {
   font-size: 11px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 10px;
   border-radius: 999px;
   background: var(--color-surface-raised);
   border: 1px solid var(--color-border);
   color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.env-chip:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.env-chip--active,
+.env-chip--active:hover {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: #fff;
 }
 
 .deeplinks-list {
