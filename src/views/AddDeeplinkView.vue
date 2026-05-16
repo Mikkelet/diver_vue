@@ -63,6 +63,13 @@ async function handleSubmit() {
     error.value = 'Host is required'
     return
   }
+  const badSegment = [...path.value.matchAll(/:([^/]*)/g)]
+    .map(m => m[1])
+    .find(seg => !/^[a-zA-Z]+$/.test(seg))
+  if (badSegment !== undefined) {
+    error.value = `Dynamic path segment ":${badSegment}" must contain only alphabet characters`
+    return
+  }
 
   loading.value = true
   error.value = null
