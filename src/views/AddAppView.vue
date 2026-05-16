@@ -74,7 +74,12 @@ async function handleSubmit() {
       router.push(`/org/${orgId}/app/${app.id}`)
     }
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : 'Failed to save app'
+    if(e instanceof Error) {
+      error.value = e.message
+    } else {
+      console.error(e)
+      error.value = "Failed to save app"
+    }
   } finally {
     loading.value = false
   }

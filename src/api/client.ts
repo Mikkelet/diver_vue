@@ -24,11 +24,13 @@ api.interceptors.response.use(
         const {config, response} = error
         const method = config?.method?.toUpperCase() ?? 'REQUEST'
         const url = config?.url ?? ''
-        if (response) {
+        const data = response.data
+        console.error({"data": data})
+        if (data) {
             console.error(`[API] ${method} ${url} → ${response.status} ${response.statusText}`, response.data)
-        } else {
-            console.error(`[API] ${method} ${url} → network error`, error.message)
+            return Promise.reject(Error(data.toString()))
         }
+        console.error(`[API] ${method} ${url} → network error`, error.message)
         return Promise.reject(error)
     },
 )
@@ -60,11 +62,14 @@ export const createApp = (
 export const getApp = (orgId: string, appId: string) =>
     api.get<ApiApp>(`/organizations/${orgId}/apps/${appId}`).then(r => normalizeApp(r.data))
 
-export const updateApp = (
+export async function updateApp(
     orgId: string,
     appId: string,
     data: { name: string; environments: Record<string, string> }
-) => api.put<ApiApp>(`/organizations/${orgId}/apps/${appId}`, data).then(r => normalizeApp(r.data))
+): Promise<App> {
+    const response = await api.put<ApiApp>(`/organizations/${orgId}/apps/${appId}`, data)
+    return normalizeApp(response.data)
+}
 
 export const deleteApp = (orgId: string, appId: string) =>
     api.delete(`/organizations/${orgId}/apps/${appId}`)
@@ -91,18 +96,17 @@ export const getDeeplink = (orgId: string, appId: string, deeplinkId: string) =>
         )
         .then(r => r.data)
 
-export const updateDeeplink = (
+export async function updateDeeplink(
     orgId: string,
     appId: string,
     deeplinkId: string,
     data: Omit<DeeplinkTemplate, 'id' | 'appId'>
-) =>
-    api
-        .put<DeeplinkTemplate>(
-            `/organizations/${orgId}/apps/${appId}/deeplinks/${deeplinkId}`,
-            data
-        )
-        .then(r => r.data)
+) {
+    const url = `/organizations/${orgId}/apps/${appId}/deeplinks/${deeplinkId}`
+    const response = await api.put<DeeplinkTemplate>(url, data)
+    return response.data
+}
+
 
 export const deleteDeeplink = (orgId: string, appId: string, deeplinkId: string) =>
     api.delete(`/organizations/${orgId}/apps/${appId}/deeplinks/${deeplinkId}`)
