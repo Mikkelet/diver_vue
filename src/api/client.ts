@@ -54,10 +54,13 @@ export const deleteOrganization = (orgId: string) =>
 export const getApps = (orgId: string) =>
     api.get<ApiApp[]>(`/organizations/${orgId}/apps`).then(r => r.data.map(normalizeApp))
 
-export const createApp = (
+export async function createApp(
     orgId: string,
     data: { name: string; environments: Record<string, string> }
-) => api.post<ApiApp>(`/organizations/${orgId}/apps`, data).then(r => normalizeApp(r.data))
+): Promise<App> {
+    const response = await api.post<ApiApp>(`/organizations/${orgId}/apps`, data)
+    return normalizeApp(response.data)
+}
 
 export const getApp = (orgId: string, appId: string) =>
     api.get<ApiApp>(`/organizations/${orgId}/apps/${appId}`).then(r => normalizeApp(r.data))

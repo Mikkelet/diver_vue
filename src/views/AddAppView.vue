@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useOrganizationsStore } from '@/stores/organizations'
-import { createApp, getApp, updateApp } from '@/api/client'
-import type { Environment } from '@/types'
+import {ref, onMounted, computed} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useOrganizationsStore} from '@/stores/organizations'
+import {createApp, getApp, updateApp} from '@/api/client'
+import type {Environment} from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import EnvironmentEditor from '@/components/EnvironmentEditor.vue'
 
@@ -16,7 +16,7 @@ const appId = route.params.appId as string | undefined
 const isEdit = computed(() => !!appId)
 
 const name = ref('')
-const environments = ref<Environment[]>([{ name: '', scheme: '' }])
+const environments = ref<Environment[]>([{name: '', scheme: ''}])
 const loading = ref(false)
 const error = ref<string | null>(null)
 const initialLoading = ref(false)
@@ -30,8 +30,8 @@ onMounted(async () => {
       const app = await getApp(orgId, appId)
       name.value = app.name
       environments.value = app.environments.length > 0
-        ? app.environments.map(e => ({ ...e }))
-        : [{ name: '', scheme: '' }]
+          ? app.environments.map(e => ({...e}))
+          : [{name: '', scheme: ''}]
     } catch {
       error.value = 'Failed to load app details'
     } finally {
@@ -74,7 +74,7 @@ async function handleSubmit() {
       router.push(`/org/${orgId}/app/${app.id}`)
     }
   } catch (e: unknown) {
-    if(e instanceof Error) {
+    if (e instanceof Error) {
       error.value = e.message
     } else {
       console.error(e)
@@ -86,7 +86,7 @@ async function handleSubmit() {
 }
 
 const backUrl = computed(() =>
-  isEdit.value && appId ? `/org/${orgId}/app/${appId}` : `/org/${orgId}`
+    isEdit.value && appId ? `/org/${orgId}/app/${appId}` : `/org/${orgId}`
 )
 </script>
 
@@ -117,25 +117,25 @@ const backUrl = computed(() =>
           <div class="form-group">
             <label class="form-label">App Name</label>
             <input
-              v-model="name"
-              class="form-input"
-              placeholder="e.g. My Mobile App"
-              autofocus
+                v-model="name"
+                class="form-input"
+                placeholder="e.g. My Mobile App"
+                autofocus
             />
           </div>
 
           <div class="form-group">
             <label class="form-label">Environments</label>
             <div class="env-header-hint">Each environment needs a name and a URL scheme.</div>
-            <EnvironmentEditor v-model="environments" />
+            <EnvironmentEditor v-model="environments"/>
           </div>
 
           <div class="form-actions">
             <RouterLink :to="backUrl" class="btn btn-secondary">Cancel</RouterLink>
             <button
-              type="submit"
-              class="btn btn-primary"
-              :disabled="loading"
+                type="submit"
+                class="btn btn-primary"
+                :disabled="loading"
             >
               <div v-if="loading" class="spinner" style="width:14px;height:14px;border-width:2px"></div>
               {{ loading ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create App') }}
