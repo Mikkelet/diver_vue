@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
+import { useHistoryStore } from '@/stores/history'
 import { getApp, getDeeplinks, deleteDeeplink } from '@/api/client'
 import type { DeeplinkTemplate, App, Environment } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
@@ -11,6 +12,7 @@ import LaunchModal from '@/components/LaunchModal.vue'
 const route = useRoute()
 const router = useRouter()
 const orgStore = useOrganizationsStore()
+const historyStore = useHistoryStore()
 
 const orgId = route.params.orgId as string
 const appId = route.params.appId as string
@@ -21,9 +23,15 @@ const loading = ref(true)
 const error = ref<string | null>(null)
 
 const launchDeeplink = ref<DeeplinkTemplate | null>(null)
+const launchEnvOverride = ref<Environment | null>(null)
+const launchInitialPath = ref<Record<string, string> | undefined>(undefined)
+const launchInitialQuery = ref<Record<string, string | boolean | string[]> | undefined>(undefined)
 const selectedEnvIndex = ref(0)
 const selectedEnv = computed<Environment | null>(
   () => app.value?.environments[selectedEnvIndex.value] ?? null
+)
+const launchEnv = computed<Environment | null>(
+  () => launchEnvOverride.value ?? selectedEnv.value
 )
 
 const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
@@ -45,7 +53,29 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+function maybeOpenFromHistory() {
+  const entryId = route.query.launchEntry as string | undefined
+  if (!entryId) return
+  const entry = historyStore.entries.find(e => e.id === entryId)
+  if (entry?.deeplink && entry.environmentSnapshot) {
+    launchDeeplink.value = entry.deeplink
+    launchEnvOverride.value = entry.environmentSnapshot
+    launchInitialPath.value = entry.pathValues
+    launchInitialQuery.value = entry.queryValues
+    const matchIdx = app.value?.environments.findIndex(e => e.name === entry.environmentSnapshot!.name) ?? -1
+    if (matchIdx >= 0) selectedEnvIndex.value = matchIdx
+  }
+  router.replace({query: {...route.query, launchEntry: undefined}})
+}
+
+onMounted(async () => {
+  await loadData()
+  maybeOpenFromHistory()
+})
+
+watch(() => route.query.launchEntry, (v) => {
+  if (v && !loading.value) maybeOpenFromHistory()
+})
 
 async function handleDeleteDeeplink(deeplinkId: string) {
   if (!confirm('Delete this deeplink? This cannot be undone.')) return
@@ -70,6 +100,9 @@ function handleLaunchDeeplink(deeplink: DeeplinkTemplate) {
 
 function closeLaunchModal() {
   launchDeeplink.value = null
+  launchEnvOverride.value = null
+  launchInitialPath.value = undefined
+  launchInitialQuery.value = undefined
 }
 </script>
 
@@ -171,10 +204,13 @@ function closeLaunchModal() {
     <!-- Launch modal -->
     <Teleport to="body">
       <LaunchModal
-        v-if="launchDeeplink && app && selectedEnv"
+        v-if="launchDeeplink && app && launchEnv"
         :deeplink="launchDeeplink"
         :app="app"
-        :environment="selectedEnv"
+        :environment="launchEnv"
+        :orgId="orgId"
+        :initialPathValues="launchInitialPath"
+        :initialQueryValues="launchInitialQuery"
         @close="closeLaunchModal"
         @edit="dl => { closeLaunchModal(); handleEditDeeplink(dl) }"
         @delete="id => { closeLaunchModal(); handleDeleteDeeplink(id) }"

@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { DeeplinkTemplate, App, Environment } from '@/types'
-import { useHistoryStore } from '@/stores/history'
+import {ref, computed, watch} from 'vue'
+import type {DeeplinkTemplate, App, Environment} from '@/types'
+import {useHistoryStore} from '@/stores/history'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate
   app: App
   environment: Environment
+  orgId: string
+  initialPathValues?: Record<string, string>
+  initialQueryValues?: Record<string, string | boolean | string[]>
+  hideActions?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -33,24 +37,27 @@ const queryValues = ref<Record<string, string | boolean | string[]>>({})
 
 // Initialize states when deeplink changes
 watch(
-  () => props.deeplink,
-  () => {
-    pathValues.value = {}
-    queryValues.value = {}
-    for (const key of pathParams.value) {
-      pathValues.value[key] = ''
-    }
-    for (const [key, type] of Object.entries(props.deeplink.queryParams)) {
-      if (type === 'boolean') {
-        queryValues.value[key] = false
-      } else if (type === 'list') {
-        queryValues.value[key] = ['']
-      } else {
-        queryValues.value[key] = ''
+    () => props.deeplink,
+    () => {
+      const initPath = props.initialPathValues
+      const initQuery = props.initialQueryValues
+      pathValues.value = {}
+      queryValues.value = {}
+      for (const key of pathParams.value) {
+        pathValues.value[key] = initPath?.[key] ?? ''
       }
-    }
-  },
-  { immediate: true }
+      for (const [key, type] of Object.entries(props.deeplink.queryParams)) {
+        const seed = initQuery?.[key]
+        if (type === 'boolean') {
+          queryValues.value[key] = typeof seed === 'boolean' ? seed : false
+        } else if (type === 'list') {
+          queryValues.value[key] = Array.isArray(seed) && seed.length > 0 ? [...seed] : ['']
+        } else {
+          queryValues.value[key] = typeof seed === 'string' ? seed : ''
+        }
+      }
+    },
+    {immediate: true}
 )
 
 function addListItem(key: string) {
@@ -70,7 +77,7 @@ function updateListItem(key: string, index: number, val: string) {
 }
 
 const unfilledParams = computed(() =>
-  pathParams.value.filter(p => !pathValues.value[p]?.trim())
+    pathParams.value.filter(p => !pathValues.value[p]?.trim())
 )
 
 // Build URI
@@ -122,6 +129,12 @@ function launch() {
     deeplinkName: props.deeplink.name,
     uri,
     environment: selectedEnv.value.name,
+    orgId: props.orgId,
+    deeplink: props.deeplink,
+    app: props.app,
+    environmentSnapshot: selectedEnv.value,
+    pathValues: {...pathValues.value},
+    queryValues: JSON.parse(JSON.stringify(queryValues.value)),
   })
   emit('close')
 }
@@ -145,13 +158,13 @@ function onOverlayClick(e: MouseEvent) {
           <div class="modal-subtitle" v-if="deeplink.description">{{ deeplink.description }}</div>
         </div>
         <div class="modal-header-actions">
-          <button class="action-btn" title="Edit deeplink" @click="emit('edit', deeplink)">
+          <button v-if="!hideActions" class="action-btn" title="Edit deeplink" @click="emit('edit', deeplink)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
               <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
             </svg>
           </button>
-          <button class="action-btn action-btn-danger" title="Delete deeplink" @click="emit('delete', deeplink.id)">
+          <button v-if="!hideActions" class="action-btn action-btn-danger" title="Delete deeplink" @click="emit('delete', deeplink.id)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -169,15 +182,15 @@ function onOverlayClick(e: MouseEvent) {
           <div class="section-label">Path Parameters</div>
           <div class="params-list">
             <div
-              v-for="param in pathParams"
-              :key="param"
-              class="param-row"
+                v-for="param in pathParams"
+                :key="param"
+                class="param-row"
             >
               <label class="param-label">{{ param }}</label>
               <input
-                v-model="pathValues[param]"
-                class="form-input"
-                :placeholder="`Enter ${param}`"
+                  v-model="pathValues[param]"
+                  class="form-input"
+                  :placeholder="`Enter ${param}`"
               />
             </div>
           </div>
@@ -185,14 +198,14 @@ function onOverlayClick(e: MouseEvent) {
 
         <!-- Query params -->
         <div
-          v-if="Object.keys(deeplink.queryParams).length > 0"
-          class="section"
+            v-if="Object.keys(deeplink.queryParams).length > 0"
+            class="section"
         >
           <div class="section-label">Query Parameters</div>
           <div class="params-list">
             <template
-              v-for="[key, type] in Object.entries(deeplink.queryParams)"
-              :key="key"
+                v-for="[key, type] in Object.entries(deeplink.queryParams)"
+                :key="key"
             >
               <!-- String -->
               <div v-if="type === 'string'" class="param-row">
@@ -201,9 +214,9 @@ function onOverlayClick(e: MouseEvent) {
                   <span class="param-type">string</span>
                 </label>
                 <input
-                  v-model="(queryValues[key] as string)"
-                  class="form-input"
-                  :placeholder="`Enter ${key}`"
+                    v-model="(queryValues[key] as string)"
+                    class="form-input"
+                    :placeholder="`Enter ${key}`"
                 />
               </div>
 
@@ -214,7 +227,7 @@ function onOverlayClick(e: MouseEvent) {
                   <span class="param-type">boolean</span>
                 </label>
                 <label class="toggle">
-                  <input type="checkbox" v-model="(queryValues[key] as boolean)" />
+                  <input type="checkbox" v-model="(queryValues[key] as boolean)"/>
                   <span class="toggle-slider"></span>
                 </label>
               </div>
@@ -227,32 +240,34 @@ function onOverlayClick(e: MouseEvent) {
                 </label>
                 <div class="list-items">
                   <div
-                    v-for="(item, idx) in (queryValues[key] as string[])"
-                    :key="idx"
-                    class="list-item-row"
+                      v-for="(item, idx) in (queryValues[key] as string[])"
+                      :key="idx"
+                      class="list-item-row"
                   >
                     <input
-                      :value="item"
-                      class="form-input"
-                      :placeholder="`Item ${idx + 1}`"
-                      @input="updateListItem(key, idx, ($event.target as HTMLInputElement).value)"
+                        :value="item"
+                        class="form-input"
+                        :placeholder="`Item ${idx + 1}`"
+                        @input="updateListItem(key, idx, ($event.target as HTMLInputElement).value)"
                     />
                     <button
-                      type="button"
-                      class="list-remove-btn"
-                      @click="removeListItem(key, idx)"
+                        type="button"
+                        class="list-remove-btn"
+                        @click="removeListItem(key, idx)"
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2.5">
                         <path d="M18 6L6 18M6 6l12 12"/>
                       </svg>
                     </button>
                   </div>
                   <button
-                    type="button"
-                    class="add-list-btn"
-                    @click="addListItem(key)"
+                      type="button"
+                      class="add-list-btn"
+                      @click="addListItem(key)"
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2.5">
                       <path d="M12 5v14M5 12h14"/>
                     </svg>
                     Add item
@@ -285,9 +300,9 @@ function onOverlayClick(e: MouseEvent) {
         <div class="launch-actions">
           <button class="btn btn-secondary" @click="emit('close')">Cancel</button>
           <button
-            class="btn btn-primary launch-btn"
-            :disabled="unfilledParams.length > 0"
-            @click="launch"
+              class="btn btn-primary launch-btn"
+              :disabled="unfilledParams.length > 0"
+              @click="launch"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M5 12h14M12 5l7 7-7 7"/>

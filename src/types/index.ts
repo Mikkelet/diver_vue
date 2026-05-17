@@ -36,4 +36,10 @@ export interface LaunchHistoryEntry {
   deeplinkName: string
   uri: string
   environment: string
+  orgId?: string
+  deeplink?: DeeplinkTemplate
+  app?: App
+  environmentSnapshot?: Environment
+  pathValues?: Record<string, string>
+  queryValues?: Record<string, string | boolean | string[]>
 }

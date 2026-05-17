@@ -1,9 +1,24 @@
 <script setup lang="ts">
 import {computed} from 'vue'
+import {useRouter} from 'vue-router'
 import {useHistoryStore} from '@/stores/history'
 import AppLayout from '@/components/AppLayout.vue'
+import type {LaunchHistoryEntry} from '@/types'
 
+const router = useRouter()
 const historyStore = useHistoryStore()
+
+function openEntry(entry: LaunchHistoryEntry) {
+  if (entry.deeplink && entry.app && entry.environmentSnapshot && entry.orgId) {
+    router.push({
+      name: 'app-detail',
+      params: {orgId: entry.orgId, appId: entry.app.id},
+      query: {launchEntry: entry.id},
+    })
+  } else {
+    window.open(entry.uri)
+  }
+}
 
 function formatDate(iso: string): string {
   try {
@@ -20,14 +35,6 @@ function clearHistory() {
   if (confirm('Clear all launch history?')) {
     historyStore.clearHistory()
   }
-}
-
-async function copyUri(uri: string) {
-  await navigator.clipboard.writeText(uri)
-}
-
-function relaunch(uri: string) {
-  window.open(uri)
 }
 
 const grouped = computed(() => {
@@ -86,6 +93,7 @@ const grouped = computed(() => {
                 v-for="entry in group.entries"
                 :key="entry.id"
                 class="history-entry"
+                @click="openEntry(entry)"
             >
               <div class="entry-main">
                 <div class="entry-header">
@@ -94,27 +102,6 @@ const grouped = computed(() => {
                   <span class="entry-time">{{ formatDate(entry.timestamp).split(',')[1]?.trim() }}</span>
                 </div>
                 <div class="entry-uri">{{ entry.uri }}</div>
-              </div>
-              <div class="entry-actions">
-                <button
-                    class="entry-btn"
-                    title="Copy URI"
-                    @click="copyUri(entry.uri)"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
-                  </svg>
-                </button>
-                <button
-                    class="entry-btn launch-btn"
-                    title="Re-launch"
-                    @click="relaunch(entry.uri)"
-                >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </button>
               </div>
             </div>
           </div>
@@ -182,6 +169,7 @@ const grouped = computed(() => {
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 12px 14px;
+  cursor: pointer;
   transition: border-color 0.12s;
 }
 
