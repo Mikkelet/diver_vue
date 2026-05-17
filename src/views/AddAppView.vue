@@ -2,7 +2,7 @@
 import {ref, onMounted, computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useOrganizationsStore} from '@/stores/organizations'
-import {createApp, getApp, updateApp} from '@/api/client'
+import {createApp, deleteApp, getApp, updateApp} from '@/api/client'
 import type {Environment} from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import EnvironmentEditor from '@/components/EnvironmentEditor.vue'
@@ -18,6 +18,7 @@ const isEdit = computed(() => !!appId)
 const name = ref('')
 const environments = ref<Environment[]>([{name: '', scheme: ''}])
 const loading = ref(false)
+const deleting = ref(false)
 const error = ref<string | null>(null)
 const initialLoading = ref(false)
 
@@ -88,6 +89,22 @@ async function handleSubmit() {
 const backUrl = computed(() =>
     isEdit.value && appId ? `/org/${orgId}/app/${appId}` : `/org/${orgId}`
 )
+
+async function handleDelete() {
+  if (!appId) return
+  if (!confirm('Delete this app? This cannot be undone.')) return
+  deleting.value = true
+  error.value = null
+  try {
+    await deleteApp(orgId, appId)
+    orgStore.removeApp(appId)
+    router.push(`/org/${orgId}`)
+  } catch (e: unknown) {
+    error.value = e instanceof Error ? e.message : 'Failed to delete app'
+  } finally {
+    deleting.value = false
+  }
+}
 </script>
 
 <template>
@@ -131,15 +148,26 @@ const backUrl = computed(() =>
           </div>
 
           <div class="form-actions">
-            <RouterLink :to="backUrl" class="btn btn-secondary">Cancel</RouterLink>
             <button
-                type="submit"
-                class="btn btn-primary"
-                :disabled="loading"
+                v-if="isEdit"
+                type="button"
+                class="btn btn-danger"
+                :disabled="deleting || loading"
+                @click="handleDelete"
             >
-              <div v-if="loading" class="spinner" style="width:14px;height:14px;border-width:2px"></div>
-              {{ loading ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create App') }}
+              {{ deleting ? 'Deleting…' : 'Delete App' }}
             </button>
+            <div class="form-actions-right">
+              <RouterLink :to="backUrl" class="btn btn-secondary">Cancel</RouterLink>
+              <button
+                  type="submit"
+                  class="btn btn-primary"
+                  :disabled="loading || deleting"
+              >
+                <div v-if="loading" class="spinner" style="width:14px;height:14px;border-width:2px"></div>
+                {{ loading ? 'Saving…' : (isEdit ? 'Save Changes' : 'Create App') }}
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -207,7 +235,14 @@ const backUrl = computed(() =>
 .form-actions {
   display: flex;
   gap: 10px;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 8px;
+}
+
+.form-actions-right {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
 }
 </style>

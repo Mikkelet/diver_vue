@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useHistoryStore } from '@/stores/history'
+import {computed} from 'vue'
+import {useHistoryStore} from '@/stores/history'
 import AppLayout from '@/components/AppLayout.vue'
 
 const historyStore = useHistoryStore()
@@ -35,12 +35,12 @@ const grouped = computed(() => {
   const seen: Record<string, number> = {}
 
   for (const entry of historyStore.entries) {
-    const date = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(
-      new Date(entry.timestamp)
+    const date = new Intl.DateTimeFormat(undefined, {dateStyle: 'medium'}).format(
+        new Date(entry.timestamp)
     )
     if (seen[date] === undefined) {
       seen[date] = groups.length
-      groups.push({ date, entries: [] })
+      groups.push({date, entries: []})
     }
     groups[seen[date]].entries.push(entry)
   }
@@ -58,9 +58,9 @@ const grouped = computed(() => {
           <div class="page-subtitle">{{ historyStore.entries.length }} launches recorded</div>
         </div>
         <button
-          v-if="historyStore.entries.length > 0"
-          class="btn btn-danger btn-sm"
-          @click="clearHistory"
+            v-if="historyStore.entries.length > 0"
+            class="btn btn-danger btn-sm"
+            @click="clearHistory"
         >
           Clear All
         </button>
@@ -76,16 +76,16 @@ const grouped = computed(() => {
       <!-- History grouped by date -->
       <div v-else class="history-content">
         <div
-          v-for="group in grouped"
-          :key="group.date"
-          class="history-group"
+            v-for="group in grouped"
+            :key="group.date"
+            class="history-group"
         >
           <div class="group-date">{{ group.date }}</div>
           <div class="entries-list">
             <div
-              v-for="entry in group.entries"
-              :key="entry.id"
-              class="history-entry"
+                v-for="entry in group.entries"
+                :key="entry.id"
+                class="history-entry"
             >
               <div class="entry-main">
                 <div class="entry-header">
@@ -97,9 +97,9 @@ const grouped = computed(() => {
               </div>
               <div class="entry-actions">
                 <button
-                  class="entry-btn"
-                  title="Copy URI"
-                  @click="copyUri(entry.uri)"
+                    class="entry-btn"
+                    title="Copy URI"
+                    @click="copyUri(entry.uri)"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -107,9 +107,9 @@ const grouped = computed(() => {
                   </svg>
                 </button>
                 <button
-                  class="entry-btn launch-btn"
-                  title="Re-launch"
-                  @click="relaunch(entry.uri)"
+                    class="entry-btn launch-btn"
+                    title="Re-launch"
+                    @click="relaunch(entry.uri)"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                     <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -271,6 +271,7 @@ const grouped = computed(() => {
   .content-header {
     padding: 16px 16px 12px;
   }
+
   .history-content {
     padding: 0 16px 16px;
   }

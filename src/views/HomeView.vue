@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { watch, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useOrganizationsStore } from '@/stores/organizations'
-import { getApps, deleteApp } from '@/api/client'
+import {watch, onMounted} from 'vue'
+import {useRoute, useRouter} from 'vue-router'
+import {useOrganizationsStore} from '@/stores/organizations'
+import {getApps} from '@/api/client'
 import AppLayout from '@/components/AppLayout.vue'
 import AppCard from '@/components/AppCard.vue'
 
@@ -13,7 +13,7 @@ const orgStore = useOrganizationsStore()
 const orgId = () => route.params.orgId as string | undefined
 
 const currentOrg = () =>
-  orgId() ? orgStore.organizations.find(o => o.id === orgId()) : null
+    orgId() ? orgStore.organizations.find(o => o.id === orgId()) : null
 
 async function loadApps(id: string) {
   orgStore.setAppsLoading(true)
@@ -23,7 +23,7 @@ async function loadApps(id: string) {
     orgStore.setApps(apps)
   } catch (e: unknown) {
     orgStore.setAppsError(
-      e instanceof Error ? e.message : 'Failed to load apps'
+        e instanceof Error ? e.message : 'Failed to load apps'
     )
   } finally {
     orgStore.setAppsLoading(false)
@@ -31,16 +31,16 @@ async function loadApps(id: string) {
 }
 
 watch(
-  () => route.params.orgId,
-  (id) => {
-    if (id) {
-      orgStore.setCurrentOrg(id as string)
-      loadApps(id as string)
-    } else {
-      orgStore.setCurrentOrg(null)
-      orgStore.setApps([])
+    () => route.params.orgId,
+    (id) => {
+      if (id) {
+        orgStore.setCurrentOrg(id as string)
+        loadApps(id as string)
+      } else {
+        orgStore.setCurrentOrg(null)
+        orgStore.setApps([])
+      }
     }
-  }
 )
 
 onMounted(() => {
@@ -51,17 +51,6 @@ onMounted(() => {
   }
 })
 
-async function handleDeleteApp(appId: string) {
-  const id = orgId()
-  if (!id) return
-  if (!confirm('Delete this app? This cannot be undone.')) return
-  try {
-    await deleteApp(id, appId)
-    orgStore.removeApp(appId)
-  } catch {
-    alert('Failed to delete app')
-  }
-}
 </script>
 
 <template>
@@ -92,8 +81,8 @@ async function handleDeleteApp(appId: string) {
             <div class="page-subtitle">Apps</div>
           </div>
           <RouterLink
-            :to="`/org/${orgId()}/add-app`"
-            class="btn btn-primary"
+              :to="`/org/${orgId()}/add-app`"
+              class="btn btn-primary"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <path d="M12 5v14M5 12h14"/>
@@ -119,9 +108,9 @@ async function handleDeleteApp(appId: string) {
           <h3>No apps yet</h3>
           <p>Add your first app to start managing deeplinks.</p>
           <RouterLink
-            :to="`/org/${orgId()}/add-app`"
-            class="btn btn-primary"
-            style="margin-top: 16px; display: inline-flex;"
+              :to="`/org/${orgId()}/add-app`"
+              class="btn btn-primary"
+              style="margin-top: 16px; display: inline-flex;"
           >
             Add App
           </RouterLink>
@@ -130,11 +119,10 @@ async function handleDeleteApp(appId: string) {
         <!-- App list -->
         <div v-else class="apps-grid">
           <AppCard
-            v-for="app in orgStore.apps"
-            :key="app.id"
-            :app="app"
-            :orgId="orgId()!"
-            @delete="handleDeleteApp"
+              v-for="app in orgStore.apps"
+              :key="app.id"
+              :app="app"
+              :orgId="orgId()!"
           />
         </div>
       </template>
@@ -179,6 +167,7 @@ async function handleDeleteApp(appId: string) {
   .content-header {
     padding: 16px 16px 12px;
   }
+
   .apps-grid {
     padding: 0 16px 16px;
   }

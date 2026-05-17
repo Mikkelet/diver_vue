@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { useThemeStore } from '@/stores/theme'
+import {useThemeStore} from '@/stores/theme'
 // Initialize theme store on app mount
 useThemeStore()
 </script>
 
 <template>
-  <RouterView />
+  <RouterView/>
 </template>

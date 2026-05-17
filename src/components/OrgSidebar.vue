@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useOrganizationsStore } from '@/stores/organizations'
+import {useRouter, useRoute} from 'vue-router'
+import {useOrganizationsStore} from '@/stores/organizations'
 
 const emit = defineEmits<{ navigate: [] }>()
 
@@ -61,10 +61,10 @@ async function copyOrgId(e: Event, orgId: string) {
 
     <div class="org-list">
       <div
-        v-for="org in orgStore.organizations"
-        :key="org.id"
-        :class="['org-item', { active: currentOrgId === org.id }]"
-        @click="selectOrg(org.id)"
+          v-for="org in orgStore.organizations"
+          :key="org.id"
+          :class="['org-item', { active: currentOrgId === org.id }]"
+          @click="selectOrg(org.id)"
       >
         <div class="org-avatar">{{ org.name.charAt(0).toUpperCase() }}</div>
         <div class="org-info">
@@ -73,9 +73,9 @@ async function copyOrgId(e: Event, orgId: string) {
         </div>
         <div class="org-actions">
           <button
-            class="action-btn"
-            title="Copy ID"
-            @click="copyOrgId($event, org.id)"
+              class="action-btn"
+              title="Copy ID"
+              @click="copyOrgId($event, org.id)"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -83,9 +83,9 @@ async function copyOrgId(e: Event, orgId: string) {
             </svg>
           </button>
           <button
-            class="action-btn action-btn-danger"
-            title="Remove"
-            @click="removeOrg($event, org.id)"
+              class="action-btn action-btn-danger"
+              title="Remove"
+              @click="removeOrg($event, org.id)"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"/>
@@ -209,6 +209,12 @@ async function copyOrgId(e: Event, orgId: string) {
 
 .org-item:hover .org-actions {
   display: flex;
+}
+
+@media (hover: none) {
+  .org-actions {
+    display: flex;
+  }
 }
 
 .action-btn {

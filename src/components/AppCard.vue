@@ -7,24 +7,10 @@ const props = defineProps<{
   orgId: string
 }>()
 
-const emit = defineEmits<{
-  delete: [appId: string]
-}>()
-
 const router = useRouter()
 
 function open() {
   router.push(`/org/${props.orgId}/app/${props.app.id}`)
-}
-
-function editApp(e: Event) {
-  e.stopPropagation()
-  router.push(`/org/${props.orgId}/app/${props.app.id}/edit-app`)
-}
-
-function deleteApp(e: Event) {
-  e.stopPropagation()
-  emit('delete', props.app.id)
 }
 </script>
 
@@ -42,22 +28,6 @@ function deleteApp(e: Event) {
           <span class="meta-text">{{ app.environments.length }} env{{ app.environments.length !== 1 ? 's' : '' }}</span>
         </div>
       </div>
-    </div>
-    <div class="app-card-actions">
-      <button class="action-btn" title="Edit app" @click="editApp">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-          <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-        </svg>
-      </button>
-      <button class="action-btn action-btn-danger" title="Delete app" @click="deleteApp">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"/>
-          <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-          <path d="M10 11v6M14 11v6"/>
-          <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
-        </svg>
-      </button>
     </div>
   </div>
 </template>
@@ -135,40 +105,5 @@ function deleteApp(e: Event) {
 .meta-text {
   font-size: 12px;
   color: var(--color-text-muted);
-}
-
-.app-card-actions {
-  display: flex;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.app-card:hover .app-card-actions {
-  opacity: 1;
-}
-
-.action-btn {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
-  border: none;
-  background: var(--color-surface-raised);
-  color: var(--color-text-muted);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: background 0.12s, color 0.12s;
-}
-
-.action-btn:hover {
-  background: var(--color-border);
-  color: var(--color-text);
-}
-
-.action-btn-danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: var(--color-error);
 }
 </style>
