@@ -30,17 +30,22 @@ function entriesToRecord(entries: QueryParamEntry[]): Record<string, QueryParamT
 }
 
 const params = ref<QueryParamEntry[]>(recordToEntries(props.modelValue))
+let suppressWatch = false
 
 watch(
   () => props.modelValue,
   (val) => {
+    if (suppressWatch) {
+      suppressWatch = false
+      return
+    }
     params.value = recordToEntries(val)
   }
 )
 
 function addParam() {
   params.value.push({ key: '', type: 'string' })
-  emitUpdate()
+  // Don't emit — empty key would be filtered out and the watch would wipe the row.
 }
 
 function removeParam(index: number) {
@@ -49,6 +54,7 @@ function removeParam(index: number) {
 }
 
 function emitUpdate() {
+  suppressWatch = true
   emit('update:modelValue', entriesToRecord(params.value))
 }
 </script>
