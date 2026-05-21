@@ -31,6 +31,79 @@ const initialLoading = ref(false)
 const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
 const appName = ref('')
 
+const importUri = ref('')
+const importError = ref<string | null>(null)
+
+function parseUri() {
+  importError.value = null
+  const raw = importUri.value.trim()
+  if (!raw) return
+
+  try {
+    const schemeEnd = raw.indexOf('://')
+    if (schemeEnd === -1) {
+      importError.value = 'URI must contain :// (e.g. scheme://host/path)'
+      return
+    }
+
+    const afterScheme = raw.slice(schemeEnd + 3)
+
+    // Split off fragment
+    const hashIdx = afterScheme.indexOf('#')
+    const beforeFragment = hashIdx >= 0 ? afterScheme.slice(0, hashIdx) : afterScheme
+    const fragmentPart = hashIdx >= 0 ? decodeURIComponent(afterScheme.slice(hashIdx + 1)) : ''
+
+    // Split off query string
+    const qIdx = beforeFragment.indexOf('?')
+    const beforeQuery = qIdx >= 0 ? beforeFragment.slice(0, qIdx) : beforeFragment
+    const queryString = qIdx >= 0 ? beforeFragment.slice(qIdx + 1) : ''
+
+    // Extract host and path
+    const firstSlash = beforeQuery.indexOf('/')
+    const parsedHost = firstSlash >= 0 ? beforeQuery.slice(0, firstSlash) : beforeQuery
+    const parsedPath = firstSlash >= 0 ? decodeURIComponent(beforeQuery.slice(firstSlash)) : ''
+
+    if (!parsedHost) {
+      importError.value = 'Could not extract host from URI'
+      return
+    }
+
+    // Parse query params — infer types from values
+    const parsedParams: Record<string, QueryParamType> = {}
+    if (queryString) {
+      const seen = new Set<string>()
+      for (const pair of queryString.split('&')) {
+        const eqIdx = pair.indexOf('=')
+        const key = decodeURIComponent(eqIdx >= 0 ? pair.slice(0, eqIdx) : pair)
+        const val = eqIdx >= 0 ? decodeURIComponent(pair.slice(eqIdx + 1)) : ''
+
+        if (!key) continue
+
+        if (seen.has(key)) {
+          parsedParams[key] = 'list'
+        } else {
+          seen.add(key)
+          if (val === 'true' || val === 'false' || val === 'boolean') {
+            parsedParams[key] = 'boolean'
+          } else if (val === 'list') {
+            parsedParams[key] = 'list'
+          } else {
+            parsedParams[key] = 'string'
+          }
+        }
+      }
+    }
+
+    host.value = parsedHost
+    path.value = parsedPath
+    fragment.value = fragmentPart
+    queryParams.value = parsedParams
+    importUri.value = ''
+  } catch {
+    importError.value = 'Failed to parse URI'
+  }
+}
+
 onMounted(async () => {
   initialLoading.value = true
   try {
@@ -135,6 +208,25 @@ const previewUri = computed(() => {
 
         <form v-else @submit.prevent="handleSubmit">
           <div v-if="error" class="error-message">{{ error }}</div>
+
+          <!-- Import from URI -->
+          <div v-if="!isEdit" class="import-section">
+            <div class="import-row">
+              <input
+                v-model="importUri"
+                class="form-input import-input"
+                placeholder="Paste a URI to prefill — e.g. scheme://host/path?key=string#frag"
+                @keydown.enter.prevent="parseUri"
+              />
+              <button type="button" class="btn btn-secondary import-btn" @click="parseUri" :disabled="!importUri.trim()">
+                Import
+              </button>
+            </div>
+            <div v-if="importError" class="import-error">{{ importError }}</div>
+            <div class="form-hint">
+              Query param values set the type: <code>true</code>/<code>false</code>/<code>boolean</code> → boolean, <code>list</code> or duplicate keys → list, anything else → string.
+            </div>
+          </div>
 
           <!-- Basic info -->
           <div class="section-heading">Basic Info</div>
@@ -296,6 +388,32 @@ const previewUri = computed(() => {
   padding: 1px 5px;
   border-radius: 3px;
   font-size: 11px;
+}
+
+.import-section {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.import-row {
+  display: flex;
+  gap: 8px;
+}
+
+.import-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-btn {
+  flex-shrink: 0;
+}
+
+.import-error {
+  font-size: 12px;
+  color: var(--color-error, #e53e3e);
+  margin-top: 6px;
 }
 
 .optional {
