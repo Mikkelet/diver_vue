@@ -3,7 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { useHistoryStore } from '@/stores/history'
-import { getApp, getDeeplinks, deleteDeeplink } from '@/api/client'
+import { getAppBySlug, getDeeplinks, deleteDeeplink, getOrganizationBySlug } from '@/api/client'
 import type { DeeplinkTemplate, App, Environment } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import DeeplinkCard from '@/components/DeeplinkCard.vue'
@@ -14,8 +14,10 @@ const router = useRouter()
 const orgStore = useOrganizationsStore()
 const historyStore = useHistoryStore()
 
-const orgId = route.params.orgId as string
-const appId = route.params.appId as string
+const orgSlug = route.params.orgSlug as string
+const appSlug = route.params.appSlug as string
+
+const orgId = ref<string>('')
 
 const app = ref<App | null>(null)
 const deeplinks = ref<DeeplinkTemplate[]>([])
@@ -34,16 +36,24 @@ const launchEnv = computed<Environment | null>(
   () => launchEnvOverride.value ?? selectedEnv.value
 )
 
-const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
+const org = computed(() => orgStore.organizations.find(o => o.slug === orgSlug))
+
+async function resolveOrgId(): Promise<string> {
+  const cached = orgStore.organizations.find(o => o.slug === orgSlug)
+  if (cached) return cached.id
+  const fetched = await getOrganizationBySlug(orgSlug)
+  orgStore.addOrganization(fetched)
+  return fetched.id
+}
 
 async function loadData() {
   loading.value = true
   error.value = null
   try {
-    const [appData, deeplinksData] = await Promise.all([
-      getApp(orgId, appId),
-      getDeeplinks(orgId, appId),
-    ])
+    const id = await resolveOrgId()
+    orgId.value = id
+    const appData = await getAppBySlug(orgSlug, appSlug)
+    const deeplinksData = await getDeeplinks(id, appData.id)
     app.value = appData
     deeplinks.value = deeplinksData
   } catch (e: unknown) {
@@ -78,20 +88,19 @@ watch(() => route.query.launchEntry, (v) => {
 })
 
 async function handleDeleteDeeplink(deeplinkId: string) {
+  if (!app.value) return
   if (!confirm('Delete this deeplink? This cannot be undone.')) return
   try {
-    await deleteDeeplink(orgId, appId, deeplinkId)
+    await deleteDeeplink(orgId.value, app.value.id, deeplinkId)
     deeplinks.value = deeplinks.value.filter(d => d.id !== deeplinkId)
-    if (app.value) {
-      app.value = { ...app.value, deeplinksCount: app.value.deeplinksCount - 1 }
-    }
+    app.value = { ...app.value, deeplinksCount: app.value.deeplinksCount - 1 }
   } catch {
     alert('Failed to delete deeplink')
   }
 }
 
 function handleEditDeeplink(deeplink: DeeplinkTemplate) {
-  router.push(`/org/${orgId}/app/${appId}/deeplink/${deeplink.id}/edit`)
+  router.push(`/org/${orgSlug}/app/${appSlug}/deeplink/${deeplink.id}/edit`)
 }
 
 function handleLaunchDeeplink(deeplink: DeeplinkTemplate) {
@@ -126,7 +135,7 @@ function closeLaunchModal() {
       <template v-else-if="app">
         <!-- Breadcrumb -->
         <div class="breadcrumb">
-          <RouterLink :to="`/org/${orgId}`" class="breadcrumb-link">
+          <RouterLink :to="`/org/${orgSlug}`" class="breadcrumb-link">
             {{ org?.name || 'Org' }}
           </RouterLink>
           <span class="breadcrumb-sep">›</span>
@@ -150,7 +159,7 @@ function closeLaunchModal() {
           </div>
           <div class="header-actions">
             <RouterLink
-              :to="`/org/${orgId}/app/${appId}/edit-app`"
+              :to="`/org/${orgSlug}/app/${appSlug}/edit-app`"
               class="btn btn-secondary"
               title="Edit app"
             >
@@ -161,7 +170,7 @@ function closeLaunchModal() {
               Edit
             </RouterLink>
             <RouterLink
-              :to="`/org/${orgId}/app/${appId}/add-deeplink`"
+              :to="`/org/${orgSlug}/app/${appSlug}/add-deeplink`"
               class="btn btn-primary"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -178,7 +187,7 @@ function closeLaunchModal() {
           <h3>No deeplinks yet</h3>
           <p>Add your first deeplink template to start launching.</p>
           <RouterLink
-            :to="`/org/${orgId}/app/${appId}/add-deeplink`"
+            :to="`/org/${orgSlug}/app/${appSlug}/add-deeplink`"
             class="btn btn-primary"
             style="margin-top: 16px; display: inline-flex;"
           >
@@ -192,8 +201,6 @@ function closeLaunchModal() {
             v-for="deeplink in deeplinks"
             :key="deeplink.id"
             :deeplink="deeplink"
-            :orgId="orgId"
-            :appId="appId"
             :environment="selectedEnv"
             @launch="handleLaunchDeeplink"
           />

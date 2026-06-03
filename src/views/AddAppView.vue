@@ -2,7 +2,7 @@
 import {ref, onMounted, computed} from 'vue'
 import {useRoute, useRouter} from 'vue-router'
 import {useOrganizationsStore} from '@/stores/organizations'
-import {createApp, deleteApp, getApp, updateApp} from '@/api/client'
+import {createApp, deleteApp, getAppBySlug, updateApp, getOrganizationBySlug} from '@/api/client'
 import type {Environment} from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import EnvironmentEditor from '@/components/EnvironmentEditor.vue'
@@ -11,9 +11,12 @@ const route = useRoute()
 const router = useRouter()
 const orgStore = useOrganizationsStore()
 
-const orgId = route.params.orgId as string
-const appId = route.params.appId as string | undefined
-const isEdit = computed(() => !!appId)
+const orgSlug = route.params.orgSlug as string
+const appSlug = route.params.appSlug as string | undefined
+const isEdit = computed(() => !!appSlug)
+
+const orgId = ref<string>('')
+const appId = ref<string>('')
 
 const name = ref('')
 const environments = ref<Environment[]>([{name: '', scheme: ''}])
@@ -22,22 +25,32 @@ const deleting = ref(false)
 const error = ref<string | null>(null)
 const initialLoading = ref(false)
 
-const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
+const org = computed(() => orgStore.organizations.find(o => o.slug === orgSlug))
+
+async function resolveOrgId(): Promise<string> {
+  const cached = orgStore.organizations.find(o => o.slug === orgSlug)
+  if (cached) return cached.id
+  const fetched = await getOrganizationBySlug(orgSlug)
+  orgStore.addOrganization(fetched)
+  return fetched.id
+}
 
 onMounted(async () => {
-  if (isEdit.value && appId) {
-    initialLoading.value = true
-    try {
-      const app = await getApp(orgId, appId)
+  initialLoading.value = true
+  try {
+    orgId.value = await resolveOrgId()
+    if (isEdit.value && appSlug) {
+      const app = await getAppBySlug(orgSlug, appSlug)
+      appId.value = app.id
       name.value = app.name
       environments.value = app.environments.length > 0
           ? app.environments.map(e => ({...e}))
           : [{name: '', scheme: ''}]
-    } catch {
-      error.value = 'Failed to load app details'
-    } finally {
-      initialLoading.value = false
     }
+  } catch {
+    error.value = 'Failed to load app details'
+  } finally {
+    initialLoading.value = false
   }
 })
 
@@ -59,20 +72,20 @@ async function handleSubmit() {
   error.value = null
 
   try {
-    if (isEdit.value && appId) {
-      const updated = await updateApp(orgId, appId, {
+    if (isEdit.value && appId.value) {
+      const updated = await updateApp(orgId.value, appId.value, {
         name: name.value.trim(),
         environments: envsMap,
       })
       orgStore.addApp(updated)
-      router.push(`/org/${orgId}/app/${appId}`)
+      router.push(`/org/${orgSlug}/app/${updated.slug}`)
     } else {
-      const app = await createApp(orgId, {
+      const app = await createApp(orgId.value, {
         name: name.value.trim(),
         environments: envsMap,
       })
       orgStore.addApp(app)
-      router.push(`/org/${orgId}/app/${app.id}`)
+      router.push(`/org/${orgSlug}/app/${app.slug}`)
     }
   } catch (e: unknown) {
     if (e instanceof Error) {
@@ -87,18 +100,18 @@ async function handleSubmit() {
 }
 
 const backUrl = computed(() =>
-    isEdit.value && appId ? `/org/${orgId}/app/${appId}` : `/org/${orgId}`
+    isEdit.value && appSlug ? `/org/${orgSlug}/app/${appSlug}` : `/org/${orgSlug}`
 )
 
 async function handleDelete() {
-  if (!appId) return
+  if (!appId.value) return
   if (!confirm('Delete this app? This cannot be undone.')) return
   deleting.value = true
   error.value = null
   try {
-    await deleteApp(orgId, appId)
-    orgStore.removeApp(appId)
-    router.push(`/org/${orgId}`)
+    await deleteApp(orgId.value, appId.value)
+    orgStore.removeApp(appId.value)
+    router.push(`/org/${orgSlug}`)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to delete app'
   } finally {

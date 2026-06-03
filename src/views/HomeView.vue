@@ -1,25 +1,29 @@
 <script setup lang="ts">
 import {watch, onMounted} from 'vue'
-import {useRoute, useRouter} from 'vue-router'
+import {useRoute} from 'vue-router'
 import {useOrganizationsStore} from '@/stores/organizations'
-import {getApps} from '@/api/client'
+import {getApps, getOrganizationBySlug} from '@/api/client'
 import AppLayout from '@/components/AppLayout.vue'
 import AppCard from '@/components/AppCard.vue'
 
 const route = useRoute()
-const router = useRouter()
 const orgStore = useOrganizationsStore()
 
-const orgId = () => route.params.orgId as string | undefined
+const orgSlug = () => route.params.orgSlug as string | undefined
 
 const currentOrg = () =>
-    orgId() ? orgStore.organizations.find(o => o.id === orgId()) : null
+    orgSlug() ? orgStore.organizations.find(o => o.slug === orgSlug()) : null
 
-async function loadApps(id: string) {
+async function loadAppsBySlug(slug: string) {
   orgStore.setAppsLoading(true)
   orgStore.setAppsError(null)
   try {
-    const apps = await getApps(id)
+    let org = orgStore.organizations.find(o => o.slug === slug)
+    if (!org) {
+      org = await getOrganizationBySlug(slug)
+      orgStore.addOrganization(org)
+    }
+    const apps = await getApps(org.id)
     orgStore.setApps(apps)
   } catch (e: unknown) {
     orgStore.setAppsError(
@@ -31,11 +35,11 @@ async function loadApps(id: string) {
 }
 
 watch(
-    () => route.params.orgId,
-    (id) => {
-      if (id) {
-        orgStore.setCurrentOrg(id as string)
-        loadApps(id as string)
+    () => route.params.orgSlug,
+    (slug) => {
+      if (slug) {
+        orgStore.setCurrentOrg(slug as string)
+        loadAppsBySlug(slug as string)
       } else {
         orgStore.setCurrentOrg(null)
         orgStore.setApps([])
@@ -44,10 +48,10 @@ watch(
 )
 
 onMounted(() => {
-  const id = orgId()
-  if (id) {
-    orgStore.setCurrentOrg(id)
-    loadApps(id)
+  const slug = orgSlug()
+  if (slug) {
+    orgStore.setCurrentOrg(slug)
+    loadAppsBySlug(slug)
   }
 })
 
@@ -57,7 +61,7 @@ onMounted(() => {
   <AppLayout>
     <div class="home-view">
       <!-- No org selected -->
-      <div v-if="!orgId()" class="empty-state">
+      <div v-if="!orgSlug()" class="empty-state">
         <div class="empty-state-icon">🤿</div>
         <h3>Welcome to Diver</h3>
         <p>Select or add an organization from the sidebar to get started.</p>
@@ -81,7 +85,7 @@ onMounted(() => {
             <div class="page-subtitle">Apps</div>
           </div>
           <RouterLink
-              :to="`/org/${orgId()}/add-app`"
+              :to="`/org/${orgSlug()}/add-app`"
               class="btn btn-primary"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -108,7 +112,7 @@ onMounted(() => {
           <h3>No apps yet</h3>
           <p>Add your first app to start managing deeplinks.</p>
           <RouterLink
-              :to="`/org/${orgId()}/add-app`"
+              :to="`/org/${orgSlug()}/add-app`"
               class="btn btn-primary"
               style="margin-top: 16px; display: inline-flex;"
           >
@@ -122,7 +126,7 @@ onMounted(() => {
               v-for="app in orgStore.apps"
               :key="app.id"
               :app="app"
-              :orgId="orgId()!"
+              :orgSlug="orgSlug()!"
           />
         </div>
       </template>

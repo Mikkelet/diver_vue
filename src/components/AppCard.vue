@@ -4,13 +4,13 @@ import type { App } from '@/types'
 
 const props = defineProps<{
   app: App
-  orgId: string
+  orgSlug: string
 }>()
 
 const router = useRouter()
 
 function open() {
-  router.push(`/org/${props.orgId}/app/${props.app.id}`)
+  router.push(`/org/${props.orgSlug}/app/${props.app.slug}`)
 }
 </script>
 

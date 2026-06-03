@@ -3,8 +3,6 @@ import type {DeeplinkTemplate, Environment} from '@/types'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate
-  orgId: string
-  appId: string
   environment: Environment | null
 }>()
 

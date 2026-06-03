@@ -12,6 +12,7 @@ export interface Environment {
 export interface App {
   id: string
   name: string
+  slug: string
   organizationId: string
   deeplinksCount: number
   environments: Environment[]

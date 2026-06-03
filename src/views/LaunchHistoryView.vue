@@ -2,17 +2,24 @@
 import {computed} from 'vue'
 import {useRouter} from 'vue-router'
 import {useHistoryStore} from '@/stores/history'
+import {useOrganizationsStore} from '@/stores/organizations'
 import AppLayout from '@/components/AppLayout.vue'
 import type {LaunchHistoryEntry} from '@/types'
 
 const router = useRouter()
 const historyStore = useHistoryStore()
+const orgStore = useOrganizationsStore()
 
 function openEntry(entry: LaunchHistoryEntry) {
   if (entry.deeplink && entry.app && entry.environmentSnapshot && entry.orgId) {
+    const org = orgStore.organizations.find(o => o.id === entry.orgId)
+    if (!org) {
+      window.open(entry.uri)
+      return
+    }
     router.push({
       name: 'app-detail',
-      params: {orgId: entry.orgId, appId: entry.app.id},
+      params: {orgSlug: org.slug, appSlug: entry.app.slug},
       query: {launchEntry: entry.id},
     })
   } else {

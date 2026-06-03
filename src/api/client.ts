@@ -41,11 +41,16 @@ export async function getOrganizations() {
     return response.data
 }
 
-export const createOrganization = (name: string) =>
-    api.post<Organization>('/organizations', {name}).then(r => r.data)
+export async function createOrganization(name: string) {
+    const response = await api.post<Organization>('/organizations', {"name": name})
+    return response.data
+}
 
 export const getOrganization = (orgId: string) =>
     api.get<Organization>(`/organizations/${orgId}`).then(r => r.data)
+
+export const getOrganizationBySlug = (slug: string) =>
+    api.get<Organization>(`/organizations/by-slug/${slug}`).then(r => r.data)
 
 export const deleteOrganization = (orgId: string) =>
     api.delete(`/organizations/${orgId}`)
@@ -64,6 +69,11 @@ export async function createApp(
 
 export const getApp = (orgId: string, appId: string) =>
     api.get<ApiApp>(`/organizations/${orgId}/apps/${appId}`).then(r => normalizeApp(r.data))
+
+export const getAppBySlug = (orgSlug: string, appSlug: string) =>
+    api
+        .get<ApiApp>(`/organizations/by-slug/${orgSlug}/apps/by-slug/${appSlug}`)
+        .then(r => normalizeApp(r.data))
 
 export async function updateApp(
     orgId: string,

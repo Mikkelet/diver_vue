@@ -20,7 +20,7 @@ function saveToStorage(orgs: Organization[]) {
 
 export const useOrganizationsStore = defineStore('organizations', () => {
   const organizations = ref<Organization[]>(loadFromStorage())
-  const currentOrgId = ref<string | null>(null)
+  const currentOrgSlug = ref<string | null>(null)
   const apps = ref<App[]>([])
   const appsLoading = ref(false)
   const appsError = ref<string | null>(null)
@@ -33,16 +33,17 @@ export const useOrganizationsStore = defineStore('organizations', () => {
   }
 
   function removeOrganization(orgId: string) {
+    const removed = organizations.value.find(o => o.id === orgId)
     organizations.value = organizations.value.filter(o => o.id !== orgId)
     saveToStorage(organizations.value)
-    if (currentOrgId.value === orgId) {
-      currentOrgId.value = null
+    if (removed && currentOrgSlug.value === removed.slug) {
+      currentOrgSlug.value = null
       apps.value = []
     }
   }
 
-  function setCurrentOrg(orgId: string | null) {
-    currentOrgId.value = orgId
+  function setCurrentOrg(slug: string | null) {
+    currentOrgSlug.value = slug
   }
 
   function setApps(newApps: App[]) {
@@ -88,7 +89,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
 
   return {
     organizations,
-    currentOrgId,
+    currentOrgSlug,
     apps,
     appsLoading,
     appsError,

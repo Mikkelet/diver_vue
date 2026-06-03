@@ -16,32 +16,32 @@ const router = createRouter({
       component: HomeView,
     },
     {
-      path: '/org/:orgId',
+      path: '/org/:orgSlug',
       name: 'org',
       component: HomeView,
     },
     {
-      path: '/org/:orgId/app/:appId',
+      path: '/org/:orgSlug/app/:appSlug',
       name: 'app-detail',
       component: AppDetailView,
     },
     {
-      path: '/org/:orgId/app/:appId/add-deeplink',
+      path: '/org/:orgSlug/app/:appSlug/add-deeplink',
       name: 'add-deeplink',
       component: AddDeeplinkView,
     },
     {
-      path: '/org/:orgId/app/:appId/deeplink/:deeplinkId/edit',
+      path: '/org/:orgSlug/app/:appSlug/deeplink/:deeplinkId/edit',
       name: 'edit-deeplink',
       component: AddDeeplinkView,
     },
     {
-      path: '/org/:orgId/add-app',
+      path: '/org/:orgSlug/add-app',
       name: 'add-app',
       component: AddAppView,
     },
     {
-      path: '/org/:orgId/app/:appId/edit-app',
+      path: '/org/:orgSlug/app/:appSlug/edit-app',
       name: 'edit-app',
       component: AddAppView,
     },

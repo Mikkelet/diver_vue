@@ -30,8 +30,9 @@ async function handleCreate() {
   try {
     const org = await createOrganization(createName.value.trim())
     orgStore.addOrganization(org)
-    router.push(`/org/${org.id}`)
+    router.push(`/org/${org.slug}`)
   } catch (e: unknown) {
+    console.log(e)
     createError.value =
       e instanceof Error ? e.message : 'Failed to create organization'
   } finally {
@@ -49,7 +50,7 @@ async function handleJoin() {
   try {
     const org = await getOrganization(joinId.value.trim())
     orgStore.addOrganization(org)
-    router.push(`/org/${org.id}`)
+    router.push(`/org/${org.slug}`)
   } catch (e: unknown) {
     joinError.value =
       e instanceof Error ? e.message : 'Organization not found'

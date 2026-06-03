@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
-import { createDeeplink, getDeeplink, updateDeeplink, getApp } from '@/api/client'
+import { createDeeplink, getDeeplink, updateDeeplink, getAppBySlug, getOrganizationBySlug } from '@/api/client'
 import type { QueryParamType } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import QueryParamEditor from '@/components/QueryParamEditor.vue'
@@ -11,10 +11,13 @@ const route = useRoute()
 const router = useRouter()
 const orgStore = useOrganizationsStore()
 
-const orgId = route.params.orgId as string
-const appId = route.params.appId as string
+const orgSlug = route.params.orgSlug as string
+const appSlug = route.params.appSlug as string
 const deeplinkId = route.params.deeplinkId as string | undefined
 const isEdit = computed(() => !!deeplinkId)
+
+const orgId = ref<string>('')
+const appId = ref<string>('')
 
 // Form fields
 const name = ref('')
@@ -28,8 +31,16 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const initialLoading = ref(false)
 
-const org = computed(() => orgStore.organizations.find(o => o.id === orgId))
+const org = computed(() => orgStore.organizations.find(o => o.slug === orgSlug))
 const appName = ref('')
+
+async function resolveOrgId(): Promise<string> {
+  const cached = orgStore.organizations.find(o => o.slug === orgSlug)
+  if (cached) return cached.id
+  const fetched = await getOrganizationBySlug(orgSlug)
+  orgStore.addOrganization(fetched)
+  return fetched.id
+}
 
 const importUri = ref('')
 const importError = ref<string | null>(null)
@@ -107,12 +118,13 @@ function parseUri() {
 onMounted(async () => {
   initialLoading.value = true
   try {
-    // Load app name
-    const app = await getApp(orgId, appId)
+    orgId.value = await resolveOrgId()
+    const app = await getAppBySlug(orgSlug, appSlug)
+    appId.value = app.id
     appName.value = app.name
 
     if (isEdit.value && deeplinkId) {
-      const dl = await getDeeplink(orgId, appId, deeplinkId)
+      const dl = await getDeeplink(orgId.value, appId.value, deeplinkId)
       name.value = dl.name ?? ''
       description.value = dl.description ?? ''
       host.value = dl.host ?? ''
@@ -158,11 +170,11 @@ async function handleSubmit() {
 
   try {
     if (isEdit.value && deeplinkId) {
-      await updateDeeplink(orgId, appId, deeplinkId, payload)
+      await updateDeeplink(orgId.value, appId.value, deeplinkId, payload)
     } else {
-      await createDeeplink(orgId, appId, payload)
+      await createDeeplink(orgId.value, appId.value, payload)
     }
-    router.push(`/org/${orgId}/app/${appId}`)
+    router.push(`/org/${orgSlug}/app/${appSlug}`)
   } catch (e: unknown) {
     error.value = e instanceof Error ? e.message : 'Failed to save deeplink'
   } finally {
@@ -170,7 +182,7 @@ async function handleSubmit() {
   }
 }
 
-const backUrl = computed(() => `/org/${orgId}/app/${appId}`)
+const backUrl = computed(() => `/org/${orgSlug}/app/${appSlug}`)
 
 // Live URI preview (using placeholder scheme)
 const previewUri = computed(() => {

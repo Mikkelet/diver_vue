@@ -11,10 +11,10 @@ const orgStore = useOrganizationsStore()
 const orgsError = ref<string | null>(null)
 
 
-const currentOrgId = computed(() => route.params.orgId as string | undefined)
+const currentOrgSlug = computed(() => route.params.orgSlug as string | undefined)
 
-function selectOrg(orgId: string) {
-  router.push(`/org/${orgId}`)
+function selectOrg(slug: string) {
+  router.push(`/org/${slug}`)
   emit('navigate')
 }
 
@@ -33,11 +33,11 @@ async function fetchOrgs() {
   }
 }
 
-function removeOrg(e: Event, orgId: string) {
+function removeOrg(e: Event, org: { id: string; slug: string }) {
   e.stopPropagation()
   if (confirm('Remove this organization from your list?')) {
-    orgStore.removeOrganization(orgId)
-    if (currentOrgId.value === orgId) {
+    orgStore.removeOrganization(org.id)
+    if (currentOrgSlug.value === org.slug) {
       router.push('/')
     }
   }
@@ -63,8 +63,8 @@ async function copyOrgId(e: Event, orgId: string) {
       <div
           v-for="org in orgStore.organizations"
           :key="org.id"
-          :class="['org-item', { active: currentOrgId === org.id }]"
-          @click="selectOrg(org.id)"
+          :class="['org-item', { active: currentOrgSlug === org.slug }]"
+          @click="selectOrg(org.slug)"
       >
         <div class="org-avatar">{{ org.name.charAt(0).toUpperCase() }}</div>
         <div class="org-info">
@@ -85,7 +85,7 @@ async function copyOrgId(e: Event, orgId: string) {
           <button
               class="action-btn action-btn-danger"
               title="Remove"
-              @click="removeOrg($event, org.id)"
+              @click="removeOrg($event, org)"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M18 6L6 18M6 6l12 12"/>
