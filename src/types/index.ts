@@ -29,6 +29,7 @@ export interface DeeplinkTemplate {
   path: string
   fragment: string
   queryParams: Record<string, QueryParamType>
+  imported?: boolean
 }
 
 export interface LaunchHistoryEntry {
