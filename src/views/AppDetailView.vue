@@ -3,6 +3,7 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { useHistoryStore } from '@/stores/history'
+import { useFavoritesStore } from '@/stores/favorites'
 import { getAppBySlug, getDeeplinks, deleteDeeplink, getOrganizationBySlug } from '@/api/client'
 import type { DeeplinkTemplate, App, Environment } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
@@ -13,6 +14,7 @@ const route = useRoute()
 const router = useRouter()
 const orgStore = useOrganizationsStore()
 const historyStore = useHistoryStore()
+const favoritesStore = useFavoritesStore()
 
 const orgSlug = route.params.orgSlug as string
 const appSlug = route.params.appSlug as string
@@ -23,6 +25,14 @@ const app = ref<App | null>(null)
 const deeplinks = ref<DeeplinkTemplate[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
+
+const sortedDeeplinks = computed(() => {
+  return [...deeplinks.value].sort((a, b) => {
+    const aFav = favoritesStore.isFavorite(a.id) ? 1 : 0
+    const bFav = favoritesStore.isFavorite(b.id) ? 1 : 0
+    return bFav - aFav
+  })
+})
 
 const launchDeeplink = ref<DeeplinkTemplate | null>(null)
 const launchEnvOverride = ref<Environment | null>(null)
@@ -199,7 +209,7 @@ function closeLaunchModal() {
         <!-- Deeplinks list -->
         <div v-else class="deeplinks-list">
           <DeeplinkCard
-            v-for="deeplink in deeplinks"
+            v-for="deeplink in sortedDeeplinks"
             :key="deeplink.id"
             :deeplink="deeplink"
             :environment="selectedEnv"

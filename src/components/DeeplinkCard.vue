@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import {computed} from 'vue'
 import type {DeeplinkTemplate, Environment} from '@/types'
+import {useFavoritesStore} from '@/stores/favorites'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate
@@ -10,11 +12,30 @@ const emit = defineEmits<{
   launch: [deeplink: DeeplinkTemplate]
 }>()
 
+const favorites = useFavoritesStore()
+const isFavorite = computed(() => favorites.isFavorite(props.deeplink.id))
+
+function toggleFavorite(event: Event) {
+  event.stopPropagation()
+  favorites.toggle(props.deeplink.id)
+}
+
 const paramCount = Object.keys(props.deeplink.queryParams).length
 </script>
 
 <template>
   <div class="deeplink-card" @click="emit('launch', deeplink)">
+    <button
+      class="favorite-btn"
+      :class="{ 'favorite-btn--active': isFavorite }"
+      :title="isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+      :aria-pressed="isFavorite"
+      @click="toggleFavorite"
+    >
+      <svg width="18" height="18" viewBox="0 0 24 24" :fill="isFavorite ? 'currentColor' : 'none'" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+    </button>
     <div class="deeplink-main">
       <div class="deeplink-header">
         <span class="deeplink-name">{{ deeplink.name }}</span>
@@ -50,6 +71,31 @@ const paramCount = Object.keys(props.deeplink.queryParams).length
 .deeplink-card:hover {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-sm);
+}
+
+.favorite-btn {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.favorite-btn:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+}
+
+.favorite-btn--active,
+.favorite-btn--active:hover {
+  color: #f5b301;
 }
 
 .deeplink-main {
