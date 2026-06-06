@@ -43,17 +43,17 @@ function goHome() {
         <span v-if="envBadge" :class="['env-badge', envBadge.class]">{{ envBadge.label }}</span>
       </div>
       <div class="header-right">
-        <RouterLink v-if="envBadge" to="/debug" class="btn btn-ghost btn-sm history-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+<RouterLink to="/tester" class="icon-link" title="URL Tester" aria-label="URL Tester">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3h6"/>
+            <path d="M10 3v6.5L4.5 19a2 2 0 001.7 3h11.6a2 2 0 001.7-3L14 9.5V3"/>
+            <path d="M7 14h10"/>
           </svg>
-          Debug
         </RouterLink>
-        <RouterLink to="/launch-history" class="btn btn-ghost btn-sm history-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <RouterLink to="/launch-history" class="icon-link" title="Launch History" aria-label="Launch History">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
           </svg>
-          History
         </RouterLink>
         <button class="theme-toggle" @click="themeStore.toggleTheme" :title="themeStore.isDark ? 'Switch to light mode' : 'Switch to dark mode'">
           <span v-if="themeStore.isDark">☀️</span>
@@ -172,6 +172,25 @@ function goHome() {
   color: var(--color-text);
 }
 
+.icon-link {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+@media (hover: hover) {
+  .icon-link:hover {
+    background: var(--color-border);
+  }
+}
+
 .theme-toggle {
   width: 36px;
   height: 36px;
@@ -240,6 +259,7 @@ function goHome() {
   .hamburger {
     display: flex;
   }
+
 
   .sidebar {
     position: fixed;

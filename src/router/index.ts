@@ -6,6 +6,7 @@ import AddAppView from '@/views/AddAppView.vue'
 import AddDeeplinkView from '@/views/AddDeeplinkView.vue'
 import LaunchHistoryView from '@/views/LaunchHistoryView.vue'
 import DebugView from '@/views/DebugView.vue'
+import TesterView from '@/views/TesterView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,6 +60,11 @@ const router = createRouter({
       path: '/debug',
       name: 'debug',
       component: DebugView,
+    },
+    {
+      path: '/tester',
+      name: 'tester',
+      component: TesterView,
     },
   ],
 })

@@ -70,10 +70,10 @@ export async function createApp(
 export const getApp = (orgId: string, appId: string) =>
     api.get<ApiApp>(`/organizations/${orgId}/apps/${appId}`).then(r => normalizeApp(r.data))
 
-export const getAppBySlug = (orgSlug: string, appSlug: string) =>
-    api
-        .get<ApiApp>(`/organizations/by-slug/${orgSlug}/apps/by-slug/${appSlug}`)
-        .then(r => normalizeApp(r.data))
+export async function getAppBySlug(orgSlug: string, appSlug: string) {
+    const r = await api.get<ApiApp>(`/organizations/by-slug/${orgSlug}/apps/by-slug/${appSlug}`)
+    return normalizeApp(r.data)
+}
 
 export async function updateApp(
     orgId: string,

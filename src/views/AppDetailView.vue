@@ -146,6 +146,7 @@ function closeLaunchModal() {
         <div class="content-header">
           <div>
             <h1 class="page-title">{{ app.name }}</h1>
+            <div class="page-uuid" :title="app.id">{{ app.id }}</div>
             <div class="app-envs">
               <button
                 v-for="(env, idx) in app.environments"
@@ -270,6 +271,15 @@ function closeLaunchModal() {
   font-weight: 700;
   color: var(--color-text);
   margin-bottom: 6px;
+}
+
+.page-uuid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 8px;
+  user-select: all;
+  word-break: break-all;
 }
 
 .app-envs {

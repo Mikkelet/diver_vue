@@ -82,6 +82,7 @@ onMounted(() => {
         <div class="content-header">
           <div>
             <h1 class="page-title">{{ currentOrg()!.name }}</h1>
+            <div class="page-uuid" :title="currentOrg()!.id">{{ currentOrg()!.id }}</div>
             <div class="page-subtitle">Apps</div>
           </div>
           <RouterLink
@@ -158,6 +159,15 @@ onMounted(() => {
   font-size: 13px;
   color: var(--color-text-muted);
   font-weight: 500;
+}
+
+.page-uuid {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin-bottom: 4px;
+  user-select: all;
+  word-break: break-all;
 }
 
 .apps-grid {
