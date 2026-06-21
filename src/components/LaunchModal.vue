@@ -46,7 +46,7 @@ watch(
       for (const key of pathParams.value) {
         pathValues.value[key] = initPath?.[key] ?? ''
       }
-      for (const [key, type] of Object.entries(props.deeplink.queryParams)) {
+      for (const [key, { type }] of Object.entries(props.deeplink.queryParams)) {
         const seed = initQuery?.[key]
         if (type === 'boolean') {
           queryValues.value[key] = typeof seed === 'boolean' ? seed : false
@@ -98,7 +98,7 @@ const builtUri = computed<string>(() => {
 
   // Build query string
   const queryParts: string[] = []
-  for (const [key, type] of Object.entries(props.deeplink.queryParams)) {
+  for (const [key, { type }] of Object.entries(props.deeplink.queryParams)) {
     const val = queryValues.value[key]
     if (type === 'boolean') {
       if (val === true) queryParts.push(`${encodeURIComponent(key)}=true`)
@@ -207,13 +207,14 @@ function onOverlayClick(e: MouseEvent) {
           <div class="section-label">Query Parameters</div>
           <div class="params-list">
             <template
-                v-for="[key, type] in Object.entries(deeplink.queryParams)"
+                v-for="[key, param] in Object.entries(deeplink.queryParams)"
                 :key="key"
             >
               <!-- String -->
-              <div v-if="type === 'string'" class="param-row">
+              <div v-if="param.type === 'string'" class="param-row">
                 <label class="param-label">
                   {{ key }}
+                  <span v-if="param.required" class="param-required" title="Required">*</span>
                   <span class="param-type">string</span>
                 </label>
                 <input
@@ -224,9 +225,10 @@ function onOverlayClick(e: MouseEvent) {
               </div>
 
               <!-- Boolean -->
-              <div v-else-if="type === 'boolean'" class="param-row param-row-bool">
+              <div v-else-if="param.type === 'boolean'" class="param-row param-row-bool">
                 <label class="param-label">
                   {{ key }}
+                  <span v-if="param.required" class="param-required" title="Required">*</span>
                   <span class="param-type">boolean</span>
                 </label>
                 <label class="toggle">
@@ -236,9 +238,10 @@ function onOverlayClick(e: MouseEvent) {
               </div>
 
               <!-- List -->
-              <div v-else-if="type === 'list'" class="param-row param-row-list">
+              <div v-else-if="param.type === 'list'" class="param-row param-row-list">
                 <label class="param-label">
                   {{ key }}
+                  <span v-if="param.required" class="param-required" title="Required">*</span>
                   <span class="param-type">list</span>
                 </label>
                 <div class="list-items">
@@ -459,6 +462,12 @@ function onOverlayClick(e: MouseEvent) {
   background: var(--color-surface-raised);
   padding: 1px 5px;
   border-radius: 3px;
+}
+
+.param-required {
+  color: var(--color-error);
+  font-weight: 700;
+  margin-left: -2px;
 }
 
 .param-row-list {

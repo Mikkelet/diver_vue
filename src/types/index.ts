@@ -20,6 +20,12 @@ export interface App {
 
 export type QueryParamType = 'string' | 'boolean' | 'list'
 
+export interface QueryParam {
+  type: QueryParamType
+  /** Whether the caller must supply this parameter for the deeplink to resolve. */
+  required: boolean
+}
+
 export interface DeeplinkTemplate {
   id: string
   appId: string
@@ -28,7 +34,7 @@ export interface DeeplinkTemplate {
   host: string
   path: string
   fragment: string
-  queryParams: Record<string, QueryParamType>
+  queryParams: Record<string, QueryParam>
   imported?: boolean
 }
 

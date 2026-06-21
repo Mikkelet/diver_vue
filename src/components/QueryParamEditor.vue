@@ -1,29 +1,30 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import type { QueryParamType } from '@/types'
+import type { QueryParam, QueryParamType } from '@/types'
 
 interface QueryParamEntry {
   key: string
   type: QueryParamType
+  required: boolean
 }
 
 const props = defineProps<{
-  modelValue: Record<string, QueryParamType>
+  modelValue: Record<string, QueryParam>
 }>()
 
 const emit = defineEmits<{
-  'update:modelValue': [params: Record<string, QueryParamType>]
+  'update:modelValue': [params: Record<string, QueryParam>]
 }>()
 
-function recordToEntries(record: Record<string, QueryParamType>): QueryParamEntry[] {
-  return Object.entries(record).map(([key, type]) => ({ key, type }))
+function recordToEntries(record: Record<string, QueryParam>): QueryParamEntry[] {
+  return Object.entries(record).map(([key, { type, required }]) => ({ key, type, required }))
 }
 
-function entriesToRecord(entries: QueryParamEntry[]): Record<string, QueryParamType> {
-  const result: Record<string, QueryParamType> = {}
+function entriesToRecord(entries: QueryParamEntry[]): Record<string, QueryParam> {
+  const result: Record<string, QueryParam> = {}
   for (const entry of entries) {
     if (entry.key.trim()) {
-      result[entry.key.trim()] = entry.type
+      result[entry.key.trim()] = { type: entry.type, required: entry.required }
     }
   }
   return result
@@ -44,7 +45,7 @@ watch(
 )
 
 function addParam() {
-  params.value.push({ key: '', type: 'string' })
+  params.value.push({ key: '', type: 'string', required: false })
   // Don't emit — empty key would be filtered out and the watch would wipe the row.
 }
 
@@ -81,6 +82,14 @@ function emitUpdate() {
         <option value="boolean">boolean</option>
         <option value="list">list</option>
       </select>
+      <label class="qp-required" title="Required parameter">
+        <input
+          type="checkbox"
+          v-model="param.required"
+          @change="emitUpdate"
+        />
+        Required
+      </label>
       <button
         type="button"
         class="remove-btn"
@@ -122,6 +131,21 @@ function emitUpdate() {
 .qp-type {
   width: 110px;
   flex-shrink: 0;
+}
+
+.qp-required {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 13px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.qp-required input {
+  cursor: pointer;
 }
 
 .remove-btn {

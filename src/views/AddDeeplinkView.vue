@@ -3,7 +3,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useOrganizationsStore } from '@/stores/organizations'
 import { createDeeplink, getDeeplink, updateDeeplink, getAppBySlug, getOrganizationBySlug } from '@/api/client'
-import type { QueryParamType } from '@/types'
+import type { QueryParam } from '@/types'
 import AppLayout from '@/components/AppLayout.vue'
 import QueryParamEditor from '@/components/QueryParamEditor.vue'
 
@@ -25,7 +25,7 @@ const description = ref('')
 const host = ref('')
 const path = ref('')
 const fragment = ref('')
-const queryParams = ref<Record<string, QueryParamType>>({})
+const queryParams = ref<Record<string, QueryParam>>({})
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -79,8 +79,10 @@ function parseUri() {
       return
     }
 
-    // Parse query params — infer types from values
-    const parsedParams: Record<string, QueryParamType> = {}
+    // Parse query params — infer types from values. A URL gives no signal about
+    // whether a parameter is required, so default required to false; it can be
+    // toggled in the editor below.
+    const parsedParams: Record<string, QueryParam> = {}
     if (queryString) {
       const seen = new Set<string>()
       for (const pair of queryString.split('&')) {
@@ -91,15 +93,15 @@ function parseUri() {
         if (!key) continue
 
         if (seen.has(key)) {
-          parsedParams[key] = 'list'
+          parsedParams[key] = { type: 'list', required: false }
         } else {
           seen.add(key)
           if (val === 'true' || val === 'false' || val === 'boolean') {
-            parsedParams[key] = 'boolean'
+            parsedParams[key] = { type: 'boolean', required: false }
           } else if (val === 'list') {
-            parsedParams[key] = 'list'
+            parsedParams[key] = { type: 'list', required: false }
           } else {
-            parsedParams[key] = 'string'
+            parsedParams[key] = { type: 'string', required: false }
           }
         }
       }
