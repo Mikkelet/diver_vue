@@ -80,6 +80,26 @@ const unfilledParams = computed(() =>
     pathParams.value.filter(p => !pathValues.value[p]?.trim())
 )
 
+// Required query params that still have no value. A boolean is always satisfied
+// (the toggle always holds true/false); strings and lists must be non-empty.
+const unfilledRequiredQuery = computed(() =>
+    Object.entries(props.deeplink.queryParams)
+        .filter(([key, param]) => {
+          if (!param.required) return false
+          const val = queryValues.value[key]
+          if (param.type === 'boolean') return false
+          if (param.type === 'list') {
+            return !Array.isArray(val) || val.every(v => !v.trim())
+          }
+          return typeof val !== 'string' || !val.trim()
+        })
+        .map(([key]) => key)
+)
+
+const canLaunch = computed(() =>
+    unfilledParams.value.length === 0 && unfilledRequiredQuery.value.length === 0
+)
+
 // Build URI
 const builtUri = computed<string>(() => {
   const env = selectedEnv.value
@@ -122,7 +142,7 @@ const builtUri = computed<string>(() => {
 })
 
 function launch() {
-  if (!selectedEnv.value) return
+  if (!selectedEnv.value || !canLaunch.value) return
   const uri = builtUri.value
   window.open(uri)
   historyStore.addEntry({
@@ -303,11 +323,14 @@ function onOverlayClick(e: MouseEvent) {
         <div v-if="unfilledParams.length > 0" class="error-message" style="margin-bottom: 12px">
           Fill required path params: {{ unfilledParams.join(', ') }}
         </div>
+        <div v-if="unfilledRequiredQuery.length > 0" class="error-message" style="margin-bottom: 12px">
+          Fill required query params: {{ unfilledRequiredQuery.join(', ') }}
+        </div>
         <div class="launch-actions">
           <button class="btn btn-secondary" @click="emit('close')">Cancel</button>
           <button
               class="btn btn-primary launch-btn"
-              :disabled="unfilledParams.length > 0"
+              :disabled="!canLaunch"
               @click="launch"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
