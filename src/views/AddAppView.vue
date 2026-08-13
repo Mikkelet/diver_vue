@@ -19,7 +19,7 @@ const orgId = ref<string>('')
 const appId = ref<string>('')
 
 const name = ref('')
-const environments = ref<Environment[]>([{name: '', scheme: ''}])
+const environments = ref<Environment[]>([{name: '', scheme: '', linkDomain: null}])
 const loading = ref(false)
 const deleting = ref(false)
 const error = ref<string | null>(null)
@@ -45,7 +45,7 @@ onMounted(async () => {
       name.value = app.name
       environments.value = app.environments.length > 0
           ? app.environments.map(e => ({...e}))
-          : [{name: '', scheme: ''}]
+          : [{name: '', scheme: '', linkDomain: null}]
     }
   } catch {
     error.value = 'Failed to load app details'
@@ -60,12 +60,15 @@ async function handleSubmit() {
     return
   }
 
-  const validEnvs = environments.value.filter(e => e.name.trim() && e.scheme.trim())
+  // An environment is addressable by a custom scheme, an https link domain, or
+  // both; one of the two is enough to keep it.
+  const validEnvs = environments.value.filter(
+      e => e.name.trim() && (e.scheme?.trim() || e.linkDomain?.trim())
+  )
 
-  // Build environments map
-  const envsMap: Record<string, string> = {}
-  for (const env of validEnvs) {
-    envsMap[env.name.trim()] = env.scheme.trim()
+  if (validEnvs.length === 0) {
+    error.value = 'Add at least one environment with a name and a URL scheme or link domain'
+    return
   }
 
   loading.value = true
@@ -75,14 +78,14 @@ async function handleSubmit() {
     if (isEdit.value && appId.value) {
       const updated = await updateApp(orgId.value, appId.value, {
         name: name.value.trim(),
-        environments: envsMap,
+        environments: validEnvs,
       })
       orgStore.addApp(updated)
       router.push(`/org/${orgSlug}/app/${updated.slug}`)
     } else {
       const app = await createApp(orgId.value, {
         name: name.value.trim(),
-        environments: envsMap,
+        environments: validEnvs,
       })
       orgStore.addApp(app)
       router.push(`/org/${orgSlug}/app/${app.slug}`)
@@ -156,7 +159,10 @@ async function handleDelete() {
 
           <div class="form-group">
             <label class="form-label">Environments</label>
-            <div class="env-header-hint">Each environment needs a name and a URL scheme.</div>
+            <div class="env-header-hint">
+              Each environment needs a name and a URL scheme, an https link domain, or both.
+              Add the app identity to generate its assetlinks.json and apple-app-site-association.
+            </div>
             <EnvironmentEditor v-model="environments"/>
           </div>
 

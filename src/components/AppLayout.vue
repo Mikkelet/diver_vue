@@ -2,11 +2,24 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useThemeStore } from '@/stores/theme'
+import { useAuthStore } from '@/stores/auth'
 import OrgSidebar from './OrgSidebar.vue'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 const router = useRouter()
 const sidebarOpen = ref(false)
+const userMenuOpen = ref(false)
+
+const userInitial = computed(() =>
+    (authStore.user?.displayName || authStore.user?.email || '?').charAt(0).toUpperCase()
+)
+
+async function signOut() {
+  userMenuOpen.value = false
+  await authStore.logout()
+  router.push({ name: 'login' })
+}
 
 const mode = import.meta.env.MODE
 const envBadge = computed(() => {
@@ -59,8 +72,22 @@ function goHome() {
           <span v-if="themeStore.isDark">☀️</span>
           <span v-else>🌙</span>
         </button>
+        <div v-if="authStore.user" class="user-menu">
+          <button class="avatar-btn" @click="userMenuOpen = !userMenuOpen" :title="authStore.user.email ?? 'Account'">
+            <img v-if="authStore.user.photoURL" :src="authStore.user.photoURL" alt="" class="avatar-img" />
+            <span v-else>{{ userInitial }}</span>
+          </button>
+          <div v-if="userMenuOpen" class="user-dropdown">
+            <div class="user-dropdown-info">
+              <div class="user-dropdown-name">{{ authStore.user.displayName || 'Account' }}</div>
+              <div class="user-dropdown-email">{{ authStore.user.email }}</div>
+            </div>
+            <button class="user-dropdown-signout" @click="signOut">Sign out</button>
+          </div>
+        </div>
       </div>
     </header>
+    <div v-if="userMenuOpen" class="user-menu-overlay" @click="userMenuOpen = false" />
 
     <!-- Body -->
     <div class="layout-body">
@@ -207,6 +234,86 @@ function goHome() {
 
 .theme-toggle:hover {
   background: var(--color-border);
+}
+
+.user-menu {
+  position: relative;
+}
+
+.avatar-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.user-dropdown {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  min-width: 200px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  z-index: 40;
+}
+
+.user-dropdown-info {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: 6px;
+}
+
+.user-dropdown-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.user-dropdown-email {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-dropdown-signout {
+  width: 100%;
+  text-align: left;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.user-dropdown-signout:hover {
+  background: var(--color-surface-raised);
+}
+
+.user-menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
 }
 
 .hamburger {

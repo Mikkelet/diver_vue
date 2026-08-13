@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import {ref, computed, watch} from 'vue'
-import type {DeeplinkTemplate, App, Environment} from '@/types'
+import type {DeeplinkTemplate, App, Environment, UrlForm} from '@/types'
 import {useHistoryStore} from '@/stores/history'
+import {availableForms, buildBaseUrl} from '@/lib/deeplinkUrl'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate
@@ -11,6 +12,7 @@ const props = defineProps<{
   initialPathValues?: Record<string, string>
   initialQueryValues?: Record<string, string | boolean | string[]>
   hideActions?: boolean
+  urlForm?: UrlForm
 }>()
 
 const emit = defineEmits<{
@@ -22,6 +24,21 @@ const emit = defineEmits<{
 const historyStore = useHistoryStore()
 
 const selectedEnv = computed(() => props.environment)
+
+// The environment decides which forms exist; the caller's preference only picks
+// among them, so an environment that lost its link domain can't strand the
+// modal on an https form it can no longer build.
+const forms = computed<UrlForm[]>(() => availableForms(selectedEnv.value))
+const selectedForm = ref<UrlForm>('scheme')
+
+watch(
+    [forms, () => props.urlForm],
+    ([available, preferred]) => {
+      const wanted = preferred ?? selectedForm.value
+      selectedForm.value = available.includes(wanted) ? wanted : (available[0] ?? 'scheme')
+    },
+    {immediate: true}
+)
 
 // Extract path params from `:paramName` tokens
 const pathParams = computed<string[]>(() => {
@@ -105,16 +122,14 @@ const builtUri = computed<string>(() => {
   const env = selectedEnv.value
   if (!env) return ''
 
-  // Normalize scheme: strip trailing :// or : if the user included it
-  const scheme = env.scheme.replace(/:\/?\/?$/, '')
-
   // Fill path params
   let filledPath = props.deeplink.path ?? ''
   for (const [key, val] of Object.entries(pathValues.value)) {
     filledPath = filledPath.replace(`:${key}`, val.trim() || `:${key}`)
   }
-  // Ensure path starts with / when non-empty
-  if (filledPath && !filledPath.startsWith('/')) filledPath = `/${filledPath}`
+
+  const base = buildBaseUrl(env, selectedForm.value, props.deeplink.host, filledPath)
+  if (!base) return ''
 
   // Build query string
   const queryParts: string[] = []
@@ -138,7 +153,7 @@ const builtUri = computed<string>(() => {
   const queryString = queryParts.length > 0 ? `?${queryParts.join('&')}` : ''
   const fragment = props.deeplink.fragment ? `#${encodeURIComponent(props.deeplink.fragment)}` : ''
 
-  return `${scheme}://${props.deeplink.host}${filledPath}${queryString}${fragment}`
+  return `${base}${queryString}${fragment}`
 })
 
 function launch() {
@@ -149,6 +164,7 @@ function launch() {
     deeplinkName: props.deeplink.name,
     uri,
     environment: selectedEnv.value.name,
+    urlForm: selectedForm.value,
     orgId: props.orgId,
     deeplink: props.deeplink,
     app: props.app,
@@ -308,6 +324,18 @@ function onOverlayClick(e: MouseEvent) {
         <div class="section">
           <div class="section-label-row">
             <span class="section-label">URI Preview</span>
+            <div v-if="forms.length > 1" class="form-toggle">
+              <button
+                  v-for="form in forms"
+                  :key="form"
+                  type="button"
+                  :class="['form-toggle-btn', { 'form-toggle-btn--active': selectedForm === form }]"
+                  :title="form === 'https' ? `https://${environment.linkDomain}` : `${environment.scheme}://`"
+                  @click="selectedForm = form"
+              >
+                {{ form === 'https' ? 'HTTPS' : 'Scheme' }}
+              </button>
+            </div>
             <button class="copy-btn" @click="copyUri" title="Copy URI">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
@@ -416,8 +444,42 @@ function onOverlayClick(e: MouseEvent) {
 .section-label-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 8px;
+}
+
+/* Pushes everything after the label to the right edge, whether or not the
+   URL-form toggle is rendered. */
+.section-label-row .section-label {
+  margin-right: auto;
+}
+
+.form-toggle {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.form-toggle-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.form-toggle-btn:hover {
+  color: var(--color-primary);
+}
+
+.form-toggle-btn--active,
+.form-toggle-btn--active:hover {
+  background: var(--color-primary);
+  color: #fff;
 }
 
 .env-tabs {

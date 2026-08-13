@@ -65,17 +65,31 @@ export const useOrganizationsStore = defineStore('organizations', () => {
   const fetchOrgsLoading = ref(false)
   const fetchOrgsError = ref<string | null>(null)
 
+  /**
+   * Replaces the cached list rather than merging into it.
+   *
+   * The API now returns only the organizations the signed-in user belongs to,
+   * so the server is authoritative. Merging would leave another account's
+   * organizations in this browser's cache after a logout, and would keep an
+   * organization in the sidebar forever after someone is removed from it.
+   */
   async function fetchAllOrganizations() {
     fetchOrgsLoading.value = true
     fetchOrgsError.value = null
-    const all = await getOrganizations()
-    for (const org of all) {
-      if (!organizations.value.find(o => o.id === org.id)) {
-        organizations.value.push(org)
-      }
+    try {
+      organizations.value = await getOrganizations()
+      saveToStorage(organizations.value)
+    } finally {
+      fetchOrgsLoading.value = false
     }
-    saveToStorage(organizations.value)
-    fetchOrgsLoading.value = false
+  }
+
+  /** Drops all cached org state. Called on logout so nothing leaks to the next user. */
+  function clearOrganizations() {
+    organizations.value = []
+    currentOrgSlug.value = null
+    apps.value = []
+    localStorage.removeItem(STORAGE_KEY)
   }
 
   function addApp(app: App) {
@@ -102,6 +116,7 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     removeApp,
     addApp,
     fetchAllOrganizations,
+    clearOrganizations,
     fetchOrgsLoading,
     fetchOrgsError,
   }

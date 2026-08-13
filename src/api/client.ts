@@ -1,14 +1,13 @@
 import axios from 'axios'
-import type {Organization, App, DeeplinkTemplate, Environment} from '@/types'
+import {useAuthStore} from '@/stores/auth'
+import type {Organization, App, DeeplinkTemplate, Environment, LinkFileBundle} from '@/types'
 
-// API returns environments as { name: scheme } map; client expects Environment[].
-type ApiApp = Omit<App, 'environments'> & { environments: Record<string, string> }
+// The API omits `environments` entirely for an app that somehow has none, so
+// every response is funnelled through here rather than trusted field-by-field.
+type ApiApp = Omit<App, 'environments'> & { environments?: Environment[] }
 
 function normalizeApp(api: ApiApp): App {
-    const envs: Environment[] = api.environments
-        ? Object.entries(api.environments).map(([name, scheme]) => ({name, scheme}))
-        : []
-    return {...api, environments: envs}
+    return {...api, environments: api.environments ?? []}
 }
 
 const api = axios.create({
@@ -18,16 +17,25 @@ const api = axios.create({
     },
 })
 
+api.interceptors.request.use(async (config) => {
+    const token = await useAuthStore().getAccessToken()
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+})
+
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         const {config, response} = error
         const method = config?.method?.toUpperCase() ?? 'REQUEST'
         const url = config?.url ?? ''
-        const data = response.data
-        console.error({"data": data})
+        // `response` is undefined on network failures — reading .data off it
+        // threw a TypeError and masked the real error.
+        const data = response?.data
         if (data) {
-            console.error(`[API] ${method} ${url} → ${response.status} ${response.statusText}`, response.data)
+            console.error(`[API] ${method} ${url} → ${response.status} ${response.statusText}`, data)
             return Promise.reject(Error(data.toString()))
         }
         console.error(`[API] ${method} ${url} → network error`, error.message)
@@ -61,7 +69,7 @@ export const getApps = (orgId: string) =>
 
 export async function createApp(
     orgId: string,
-    data: { name: string; environments: Record<string, string> }
+    data: { name: string; environments: Environment[] }
 ): Promise<App> {
     const response = await api.post<ApiApp>(`/organizations/${orgId}/apps`, data)
     return normalizeApp(response.data)
@@ -78,7 +86,7 @@ export async function getAppBySlug(orgSlug: string, appSlug: string) {
 export async function updateApp(
     orgId: string,
     appId: string,
-    data: { name: string; environments: Record<string, string> }
+    data: { name: string; environments: Environment[] }
 ): Promise<App> {
     const response = await api.put<ApiApp>(`/organizations/${orgId}/apps/${appId}`, data)
     return normalizeApp(response.data)
@@ -86,6 +94,14 @@ export async function updateApp(
 
 export const deleteApp = (orgId: string, appId: string) =>
     api.delete(`/organizations/${orgId}/apps/${appId}`)
+
+/** assetlinks.json + apple-app-site-association for one environment. */
+export const getLinkFiles = (orgId: string, appId: string, environment: string) =>
+    api
+        .get<LinkFileBundle>(
+            `/organizations/${orgId}/apps/${appId}/environments/${encodeURIComponent(environment)}/link-files`
+        )
+        .then(r => r.data)
 
 // Deeplinks
 export const getDeeplinks = (orgId: string, appId: string) =>

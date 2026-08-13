@@ -17,6 +17,13 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },
+      '/auth': {
+        // diver_auth's compose port. 8081 was Keycloak's, and nothing has
+        // listened there since it was retired — the proxy failed with a 500.
+        target: 'http://localhost:3201',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/auth/, ''),
+      },
     },
   },
 })

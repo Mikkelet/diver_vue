@@ -5,10 +5,12 @@ import { useOrganizationsStore } from '@/stores/organizations'
 import { useHistoryStore } from '@/stores/history'
 import { useFavoritesStore } from '@/stores/favorites'
 import { getAppBySlug, getDeeplinks, deleteDeeplink, getOrganizationBySlug } from '@/api/client'
-import type { DeeplinkTemplate, App, Environment } from '@/types'
+import type { DeeplinkTemplate, App, Environment, UrlForm } from '@/types'
+import { availableForms } from '@/lib/deeplinkUrl'
 import AppLayout from '@/components/AppLayout.vue'
 import DeeplinkCard from '@/components/DeeplinkCard.vue'
 import LaunchModal from '@/components/LaunchModal.vue'
+import LinkFilesModal from '@/components/LinkFilesModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,6 +40,7 @@ const launchDeeplink = ref<DeeplinkTemplate | null>(null)
 const launchEnvOverride = ref<Environment | null>(null)
 const launchInitialPath = ref<Record<string, string> | undefined>(undefined)
 const launchInitialQuery = ref<Record<string, string | boolean | string[]> | undefined>(undefined)
+const launchFormOverride = ref<UrlForm | null>(null)
 const selectedEnvIndex = ref(0)
 const selectedEnv = computed<Environment | null>(
   () => app.value?.environments[selectedEnvIndex.value] ?? null
@@ -45,6 +48,17 @@ const selectedEnv = computed<Environment | null>(
 const launchEnv = computed<Environment | null>(
   () => launchEnvOverride.value ?? selectedEnv.value
 )
+
+// Which of the environment's two addressing forms the page is previewing and
+// launching with. Follows the environment, since switching to a scheme-only one
+// leaves nothing to show in https form.
+const forms = computed<UrlForm[]>(() => availableForms(selectedEnv.value))
+const urlForm = ref<UrlForm>('scheme')
+watch(forms, (available) => {
+  if (!available.includes(urlForm.value)) urlForm.value = available[0] ?? 'scheme'
+}, {immediate: true})
+
+const showLinkFiles = ref(false)
 
 const org = computed(() => orgStore.organizations.find(o => o.slug === orgSlug))
 
@@ -84,6 +98,9 @@ function maybeOpenFromHistory() {
     launchInitialQuery.value = entry.queryValues
     const matchIdx = app.value?.environments.findIndex(e => e.name === entry.environmentSnapshot!.name) ?? -1
     if (matchIdx >= 0) selectedEnvIndex.value = matchIdx
+    // Replay the entry in the form it was launched with, not whatever the page
+    // happens to be showing.
+    launchFormOverride.value = entry.urlForm ?? null
   }
   router.replace({query: {...route.query, launchEntry: undefined}})
 }
@@ -122,6 +139,7 @@ function closeLaunchModal() {
   launchEnvOverride.value = null
   launchInitialPath.value = undefined
   launchInitialQuery.value = undefined
+  launchFormOverride.value = null
 }
 </script>
 
@@ -165,6 +183,32 @@ function closeLaunchModal() {
                 @click="selectedEnvIndex = idx"
               >
                 {{ env.name }}
+              </button>
+            </div>
+            <div class="env-detail">
+              <div v-if="forms.length > 1" class="form-toggle">
+                <button
+                  v-for="form in forms"
+                  :key="form"
+                  type="button"
+                  :class="['form-toggle-btn', { 'form-toggle-btn--active': urlForm === form }]"
+                  @click="urlForm = form"
+                >
+                  {{ form === 'https' ? 'HTTPS' : 'Scheme' }}
+                </button>
+              </div>
+              <button
+                v-if="selectedEnv"
+                type="button"
+                class="link-files-btn"
+                title="assetlinks.json and apple-app-site-association for this environment"
+                @click="showLinkFiles = true"
+              >
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                </svg>
+                Link files
               </button>
             </div>
           </div>
@@ -213,6 +257,7 @@ function closeLaunchModal() {
             :key="deeplink.id"
             :deeplink="deeplink"
             :environment="selectedEnv"
+            :urlForm="urlForm"
             @launch="handleLaunchDeeplink"
           />
         </div>
@@ -229,9 +274,21 @@ function closeLaunchModal() {
         :orgId="orgId"
         :initialPathValues="launchInitialPath"
         :initialQueryValues="launchInitialQuery"
+        :urlForm="launchFormOverride ?? urlForm"
         @close="closeLaunchModal"
         @edit="dl => { closeLaunchModal(); handleEditDeeplink(dl) }"
         @delete="id => { closeLaunchModal(); handleDeleteDeeplink(id) }"
+      />
+    </Teleport>
+
+    <!-- Link files -->
+    <Teleport to="body">
+      <LinkFilesModal
+        v-if="showLinkFiles && app && selectedEnv"
+        :orgId="orgId"
+        :appId="app.id"
+        :environment="selectedEnv"
+        @close="showLinkFiles = false"
       />
     </Teleport>
   </AppLayout>
@@ -302,6 +359,62 @@ function closeLaunchModal() {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
+}
+
+.env-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.form-toggle {
+  display: flex;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.form-toggle-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border: none;
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.form-toggle-btn:hover {
+  color: var(--color-primary);
+}
+
+.form-toggle-btn--active,
+.form-toggle-btn--active:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.link-files-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-raised);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.link-files-btn:hover {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 
 .env-chip {

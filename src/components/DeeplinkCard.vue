@@ -1,12 +1,25 @@
 <script setup lang="ts">
 import {computed} from 'vue'
-import type {DeeplinkTemplate, Environment} from '@/types'
+import type {DeeplinkTemplate, Environment, UrlForm} from '@/types'
 import {useFavoritesStore} from '@/stores/favorites'
+import {normalizeScheme} from '@/lib/deeplinkUrl'
 
 const props = defineProps<{
   deeplink: DeeplinkTemplate
   environment: Environment | null
+  urlForm?: UrlForm
 }>()
+
+// In https form the link domain is the authority and the deeplink's host
+// becomes the first path segment, so the split between "prefix" and "host"
+// moves — see buildBaseUrl, which the launch modal builds the real URL with.
+const prefix = computed(() => {
+  const env = props.environment
+  if (!env) return ''
+  if (props.urlForm === 'https' && env.linkDomain) return `https://${env.linkDomain}/`
+  const scheme = normalizeScheme(env.scheme)
+  return scheme ? `${scheme}://` : ''
+})
 
 const emit = defineEmits<{
   launch: [deeplink: DeeplinkTemplate]
@@ -44,7 +57,7 @@ const paramCount = Object.keys(props.deeplink.queryParams).length
         </div>
       </div>
       <div class="deeplink-path">
-        <span v-if="environment" class="path-scheme">{{ environment.scheme.replace(/:\/?\/?$/, '') }}://</span>
+        <span v-if="prefix" class="path-scheme">{{ prefix }}</span>
         <span class="path-host">{{ deeplink.host }}</span>
         <span class="path-segment">{{ deeplink.path?.startsWith('/') ? deeplink.path : `/${deeplink.path || ''}` }}</span>
       </div>
