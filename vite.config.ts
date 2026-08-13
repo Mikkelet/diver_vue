@@ -13,14 +13,14 @@ export default defineConfig({
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3200',
+        target: 'http://localhost:3301',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/api/, ''),
       },
       '/auth': {
         // diver_auth's compose port. 8081 was Keycloak's, and nothing has
         // listened there since it was retired — the proxy failed with a 500.
-        target: 'http://localhost:3201',
+        target: 'http://localhost:3302',
         changeOrigin: true,
         rewrite: path => path.replace(/^\/auth/, ''),
       },
